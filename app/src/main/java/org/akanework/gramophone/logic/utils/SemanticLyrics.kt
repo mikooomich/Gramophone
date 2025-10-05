@@ -708,6 +708,7 @@ fun parseLrc(lyricText: String, trimEnabled: Boolean, multiLineEnabled: Boolean)
     }
     out.sortBy { it.start }
     val invalidLines = ArrayList<LyricLine>()
+    val countInRequired = ArrayList<LyricLine>()
     var previousLyric: LyricLine? = null
     val defaultIsWalaokeM = out.find { it.speaker?.isWalaoke == true } != null &&
             out.find { it.speaker?.isWalaoke == false } == null
@@ -729,9 +730,46 @@ fun parseLrc(lyricText: String, trimEnabled: Boolean, multiLineEnabled: Boolean)
                     ?: out.find { it.start > lyric.start }?.start?.minus(1uL)
                     ?: Long.MAX_VALUE.toULong()
         lyric.isTranslated = isTranslated
+
+        if (lyric.start > (previousLyric?.end?: 0.toULong())  && ((lyric.start - (previousLyric?.end?: 0.toULong()) ) > 7000L.toULong())) {
+            countInRequired.add(lyric)
+        }
         previousLyric = lyric
     }
     out.removeAll(invalidLines)
+    countInRequired.forEach {
+        val index = out.indexOf(it)
+        val start = it.start - 3000L.toULong()
+        val end = it.start
+            // add lyric after that
+        val words = mutableListOf(
+            Word(
+                timeRange = ULongRange(start, start + 1000.toULong()),
+                charRange = IntRange(0, 1),
+                isRtl = false,
+            ),
+            Word(
+                timeRange = ULongRange(start + 1000.toULong(), start + 2000.toULong()),
+                charRange = IntRange(2, 3),
+                isRtl = false,
+            ),
+            Word(
+                timeRange = ULongRange(start + 2000.toULong(), start + 3000.toULong()),
+                charRange = IntRange(4, 5),
+                isRtl = false,
+            )
+        )
+
+        val ll = LyricLine(
+            text = "⬤ ⬤ ⬤ ", // the space at the end prevents the entire app from crashing lol. Can also use "•"
+            start = start,
+            end = end,
+            words = words,
+            speaker = null,
+            isTranslated = false,
+        )
+        out.add(index, ll)
+    }
 
     while (out.firstOrNull()?.text?.isBlank() == true)
         out.removeAt(0)
