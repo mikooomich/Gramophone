@@ -436,7 +436,6 @@ object LrcTestData {
 		LyricLine(start = 21600uL, text = """Head to the rules and ya hit the ground running""", words = null, speaker = null, end = 24299uL, isTranslated = false),
 		LyricLine(start = 21600uL, text = """早已厌烦了老套的规则  奔跑着用双脚撞击地面""", words = null, speaker = null, end = 24299uL, isTranslated = true),
 		LyricLine(start = 24300uL, text = """""", words = null, speaker = null, end = 26299uL, isTranslated = false),
-		LyricLine(start = 24300uL, text = """""", words = null, speaker = null, end = 26299uL, isTranslated = true),
 		LyricLine(start = 26300uL, text = """You're brain gets smart but your head gets dumb""", words = null, speaker = null, end = 28599uL, isTranslated = false),
 		LyricLine(start = 26300uL, text = """你的大脑变得又聪明又愚蠢""", words = null, speaker = null, end = 28599uL, isTranslated = true),
 		LyricLine(start = 28600uL, text = """So much to do so much to see""", words = null, speaker = null, end = 30599uL, isTranslated = false),
