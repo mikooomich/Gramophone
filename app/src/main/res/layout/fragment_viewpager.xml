@@ -17,28 +17,34 @@
             android:id="@+id/collapsingtoolbar"
             style="?attr/collapsingToolbarLayoutMediumStyle"
             android:layout_width="match_parent"
-            android:layout_height="?attr/collapsingToolbarLayoutMediumSize"
+            android:layout_height="24dp"
             app:collapsedTitleTextColor="?attr/colorOnSurface"
-            app:collapsedTitleTextAppearance="?textAppearanceTitleLarge"
+            app:expandedTitleTextAppearance="?textAppearanceHeadlineSmall"
             app:expandedTitleTextColor="?attr/colorOnSurface"
-            app:expandedTitleTextAppearance="?textAppearanceHeadlineLarge"
+            app:collapsedTitleTextAppearance="?textAppearanceTitleSmall"
             app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
             app:contentScrim="@android:color/transparent"
             app:title="@string/app_name"
             app:expandedTitleMarginStart="24dp"
             app:titleCollapseMode="scale">
 
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/topAppBar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:elevation="0dp"
-                android:paddingStart="24dp"
-                android:paddingEnd="8dp"
-                app:layout_collapseMode="pin"
-                app:menu="@menu/home_menu" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:orientation="horizontal">
 
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:elevation="0dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            app:layout_collapseMode="pin"
+            app:menu="@menu/home_menu" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout"
@@ -53,12 +59,17 @@
             app:tabMinWidth="0dp"
             app:tabMode="scrollable"
             app:tabGravity="start"
-            app:tabPaddingEnd="12dp"
-            app:tabPaddingStart="12dp"
+            app:tabPaddingEnd="6dp"
+            app:tabPaddingStart="6dp"
             app:tabRippleColor="@android:color/transparent"
             app:tabSelectedTextColor="?colorOnSecondaryContainer"
             app:tabTextColor="?attr/colorOnSurfaceVariant"
             app:tabTextAppearance="@style/TabTextAppearance"/>
+
+        </LinearLayout>
+
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
