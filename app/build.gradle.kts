@@ -17,6 +17,7 @@ plugins {
     id("com.mikepenz.aboutlibraries.plugin")
     id("com.mikepenz.aboutlibraries.plugin.android")
     id("pt.jcosta.resourceplaceholders")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -354,6 +355,12 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.17-beta-2")
     "userdebugImplementation"(kotlin("reflect", kotlinVersion)) // who thought String.invoke() is a good idea?????
     debugImplementation(kotlin("reflect", kotlinVersion))
+
+    // TODO: make prettier when I feel cute
+    val room_version = "2.8.4"
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+//    implementation("androidx.room:room-ktx:${room_version}")
 }
 
 fun String.runCommand(
