@@ -398,12 +398,14 @@ class PlaylistQueueSheet(
             if (playlist.first.isEmpty()) {
                 val status = instance?.deleteQueue(-1)
                 if (status != true) throw IllegalStateException("Failed to clear queue")
-                detachedHead.value = true
-                detachedQueue = -1
 
-                val inactiveQueues = instance.getInactiveQueues()
-                if (inactiveQueues.isEmpty()) {
+                if (true) { // TODO: how best way check if no more queues left
                     dismiss()
+                } else {
+                    // force ui refresh
+                    detachedHead.value = true
+                    detachedQueue = -1
+                    detachedHead.value = false
                 }
             }
 
