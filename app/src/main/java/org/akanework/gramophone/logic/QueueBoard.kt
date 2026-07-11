@@ -29,6 +29,7 @@ import androidx.core.os.BundleCompat
 import androidx.media3.common.BundleListRetriever
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
@@ -62,31 +63,6 @@ class QueueBoard(
      * Data structure management
      * ========================
      */
-
-    /**
-     * Push this queue to the player, and save the player queue back to QueueBoard.
-     *
-     * @param index
-     */
-    fun commitQueue(
-        index: Int,
-        startIndex: Int = -1
-    ) {
-        Log.v(TAG, "commitQueue() called")
-        if (index < 0 || index >= masterQueues.size) {
-            Log.w(
-                TAG,
-                "commitQueue() index $index out of bounds (size = ${masterQueues.size}). Aborting"
-            )
-            return
-        }
-
-        var new = masterQueues.removeAt(index)
-        if (startIndex != -1) {
-            new = new.copy(startIndex = startIndex, startPositionMs = C.TIME_UNSET)
-        }
-        setCurrQueue(new)
-    }
 
     /**
      * Pin a queue.
@@ -320,26 +296,6 @@ class QueueBoard(
     }
 
     /**
-     * Load a queue into the media player. This should be called on the main thread.
-     *
-     * @param mq Queue object
-     */
-    private fun setCurrQueue(mq: MultiQueueObject) {
-        val plr = player.endedWorkaroundPlayer!!
-        if (QUEUE_DEBUG)
-            Log.d(
-                TAG,
-                "Setting current queue; $mq; ids: ${plr.currentMediaItem?.mediaId}, ${mq.queue[mq.startIndex].mediaId}"
-            )
-        plr.setMediaItems(
-            mq.queue, mq.startIndex,
-            mq.startPositionMs,
-            mq.title, mq.expiry.value == null, mq.isOriginal, mq.shuffleOrder, mq.ended,
-            mq.repeatMode, mq.shuffleModeEnabled, null
-        )
-    }
-
-    /**
      * Debug uses
      */
     fun age() {
@@ -392,7 +348,7 @@ data class MultiQueueObject(
 
     var startIndex: Int = C.INDEX_UNSET, // position of current song
     var startPositionMs: Long = C.TIME_UNSET,
-    var repeatMode: Int = 0,
+    var repeatMode: @Player.RepeatMode Int = 0,
 
     var shuffleOrder: CircularShuffleOrder.Persistent? = null,
     var ended: Boolean = false,

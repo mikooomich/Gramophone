@@ -172,7 +172,6 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         const val SERVICE_GET_AUDIO_FORMAT = "get_audio_format"
         const val SERVICE_GET_LYRICS = "get_lyrics"
         const val SERVICE_TIMER_CHANGED = "changed_timer"
-        const val SERVICE_SET_MEDIA_ITEMS_SEAMLESSLY = "set_media_items_seamlessly"
 
         const val SERVICE_QB_GET_INACTIVE_LIST = "qb_get_inactive_list"
         const val SERVICE_QB_LOAD_QUEUE = "qb_load"
@@ -575,11 +574,10 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                             list,
                             items.startIndex,
                             items.startPositionMs,
-                            items.extras
                         )
                     } catch (e: IllegalSeekPositionException) {
                         try {
-                            endedWorkaroundPlayer?.setMediaItems(list, items.extras)
+                            endedWorkaroundPlayer?.setMediaItems(list, )
                             Log.w(TAG, "failed to restore index", e)
                         } catch (_: IllegalSeekPositionException) {
                             Log.e(TAG, "failed to restore", e)
@@ -804,7 +802,6 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         availableSessionCommands.add(SessionCommand(SERVICE_QUERY_TIMER, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_AUDIO_FORMAT, Bundle.EMPTY))
-        availableSessionCommands.add(SessionCommand(SERVICE_SET_MEDIA_ITEMS_SEAMLESSLY, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_INACTIVE_LIST, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_QUEUE_FOR_UI, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_LOAD_QUEUE, Bundle.EMPTY))
@@ -926,48 +923,6 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         customCommand: SessionCommand,
         args: Bundle
     ): ListenableFuture<SessionResult> {
-        if (customCommand.customAction == SERVICE_SET_MEDIA_ITEMS_SEAMLESSLY) {
-            val songList = MediaItemList.getList(
-                customCommand.customExtras.getBinder("items")!!)
-            val position = customCommand.customExtras.getInt("position")
-            val title = customCommand.customExtras.getString("title")!!
-            return Futures.transform(
-                onAddMediaItems(session, controller, songList),
-                { songList ->
-                    val currentItem = endedWorkaroundPlayer!!.currentMediaItem
-                    if (currentItem?.mediaId == songList[position].mediaId) {
-                        val index = endedWorkaroundPlayer!!.currentMediaItemIndex
-                        val isLast = endedWorkaroundPlayer!!.mediaItemCount - index == 1
-                        endedWorkaroundPlayer!!.cloneQueue(title, newIsPinned = false,
-                            original = true)
-                        if (index == 0)
-                            endedWorkaroundPlayer!!.addMediaItems(0,
-                                songList.subList(0, position))
-                        else
-                            endedWorkaroundPlayer!!.replaceMediaItems(0, index,
-                                songList.subList(0, position))
-                        endedWorkaroundPlayer!!.replaceMediaItem(position,
-                            songList[position])
-                        if (isLast)
-                            endedWorkaroundPlayer!!.addMediaItems(if (songList.size > position + 1)
-                                songList.subList(position + 1, songList.size) else emptyList())
-                        else
-                            endedWorkaroundPlayer!!.replaceMediaItems(position + 1,
-                                Int.MAX_VALUE, if (songList.size > position +
-                                    1) songList.subList(position + 1, songList.size)
-                                else emptyList())
-                        endedWorkaroundPlayer!!.currentIsOriginal = true
-                    } else {
-                        endedWorkaroundPlayer!!.setMediaItems(songList, startIndex = position,
-                            startPositionMs = C.TIME_UNSET, title, pinned = false, original = true,
-                            newShuffleOrder = null, ended = false, repeatMode = null,
-                            shuffleModeEnabled = null, playbackParameters = null)
-                    }
-                    SessionResult(SessionResult.RESULT_SUCCESS)
-                },
-                mainExecutor
-            )
-        }
         return Futures.immediateFuture(
             when (customCommand.customAction) {
                 SERVICE_SET_TIMER -> {
@@ -1089,7 +1044,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 SERVICE_QB_LOAD_QUEUE -> {
                     val index = customCommand.customExtras.getInt("index")
                     val startIndex = customCommand.customExtras.getInt("startIndex")
-                    qb.commitQueue(index, startIndex)
+                    endedWorkaroundPlayer!!.commitQueue(index, startIndex)
                     SessionResult(SessionResult.RESULT_SUCCESS)
                 }
 
@@ -1130,7 +1085,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                             } else {
                                 val currentTitle = endedWorkaroundPlayer!!.currentTitle
                                 val nextQueue = qb.getQueue(nextQueueIndex).first()
-                                qb.commitQueue(nextQueueIndex, nextQueue.startIndex)
+                                endedWorkaroundPlayer!!.commitQueue(nextQueueIndex, nextQueue.startIndex)
                                 currentTitle?.let {
                                     // TODO: nick plz do delete active queue if this is too cursed
                                     qb.deleteQueue(it)
@@ -1214,7 +1169,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     if (isForPlayback && items.mediaItems.isNotEmpty()) {
                         val list = runBlocking { mapMediaItemsForFavorites(items.mediaItems) }
                         settable.set(MediaItemsWithStartPosition(list, items.startIndex,
-                            items.startPositionMs, items.extras))
+                            items.startPositionMs))
                     } else if (items.mediaItems.isNotEmpty()) {
                         var theItem = items.mediaItems[items.startIndex]
                         if (theItem.mediaMetadata.durationMs != null &&
@@ -1517,32 +1472,6 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 )
             }
         }
-    }
-
-    // To avoid race conditions, the future here must be completed on session application thread
-    override fun onSetMediaItems(
-        mediaSession: MediaSession,
-        controller: MediaSession.ControllerInfo,
-        mediaItems: List<MediaItem>,
-        startIndex: Int,
-        startPositionMs: Long
-    ): ListenableFuture<MediaItemsWithStartPosition> {
-        return Futures.transform(
-            onAddMediaItems(mediaSession, controller, mediaItems),
-            { mediaItems ->
-                val title = mediaItems.firstOrNull()?.mediaMetadata?.extras
-                    ?.getString("mq_title")
-                val list = if (title != null) mediaItems.toMutableList().apply {
-                    this[0] = this[0].buildUpon().setMediaMetadata(this[0].mediaMetadata.buildUpon()
-                        .setExtras(Bundle(this[0].mediaMetadata.extras!!).apply {
-                            // Remove mq_title extra as this is purely for transport to here
-                            remove("mq_title")
-                        }).build()).build()
-                } else mediaItems
-                val qt = title ?: getString(R.string.unknown_playlist)
-                return@transform MediaItemsWithStartPosition(list, startIndex, startPositionMs,
-                    Bundle().apply { putString("nextTitle", qt) })
-            }, MoreExecutors.directExecutor())
     }
 
     override fun onAddMediaItems(

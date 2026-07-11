@@ -88,7 +88,6 @@ import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVIC
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_REORDER
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_UNPIN_QUEUE
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QUERY_TIMER
-import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_SET_MEDIA_ITEMS_SEAMLESSLY
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_SET_TIMER
 import org.akanework.gramophone.logic.utils.AfFormatInfo
 import org.akanework.gramophone.logic.utils.AudioFormatDetector
@@ -302,20 +301,6 @@ fun MediaController.setTimer(value: Int, waitUntilSongEnd: Boolean) {
             customExtras.putBoolean("pauseOnEnd", waitUntilSongEnd)
         }, Bundle.EMPTY
     )
-}
-
-fun MediaController.setMediaItemsSeamlessly(items: List<MediaItem>, position: Int, title: String) {
-    if (currentMediaItem == null) {
-        setMediaItems(items.toMutableList(), position, C.TIME_UNSET)
-    } else {
-        sendCustomCommand(
-            SessionCommand(SERVICE_SET_MEDIA_ITEMS_SEAMLESSLY, Bundle.EMPTY).apply {
-                customExtras.putBinder("items", MediaItemList(items))
-                customExtras.putInt("position", position)
-                customExtras.putString("title", title)
-            }, Bundle.EMPTY
-        )
-    }
 }
 
 inline fun <reified T> MutableList<T>.forEachSupport(skipFirst: Int = 0, operator: (T) -> Unit) {

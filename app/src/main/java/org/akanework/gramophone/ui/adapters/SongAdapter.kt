@@ -27,6 +27,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ShareCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -41,8 +42,8 @@ import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.logic.getFile
 import org.akanework.gramophone.logic.gramophoneApplication
+import org.akanework.gramophone.logic.queueWithTitle
 import org.akanework.gramophone.logic.requireMediaStoreId
-import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.MyRecyclerView
 import org.akanework.gramophone.ui.MediaControllerViewModel
 import org.akanework.gramophone.ui.SongPickerActivity
@@ -227,7 +228,7 @@ class SongAdapter(
             // UX of Chinese players that open full player when clicking song, and we don't want
             // this UX to break if list is different for some reason.
             val currentItem = currentMediaItem
-            setMediaItemsSeamlessly(songList, position, title)
+            setMediaItems(queueWithTitle(songList, title), position, C.TIME_UNSET)
             prepare()
             play()
             if (currentItem?.mediaId == songList[position].mediaId) {

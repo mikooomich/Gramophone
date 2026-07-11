@@ -314,14 +314,6 @@ class LastPlayedManager(
                         },
                     lastPlayedIdx,
                     lastPlayedPos,
-                    Bundle().apply {
-                        putString("nextTitle", "LastPlayedManager") // TODO(MQ)
-                        putParcelable("nextShuffleOrder", seed)
-                        putBoolean("isEnded", ended)
-                        putInt("repeatMode", repeatMode)
-                        putBoolean("shuffleModeEnabled", shuffleModeEnabled)
-                        putParcelable("playbackParameters", playbackParameters.toBundle())
-                    }
                 )
                 withContext(Dispatchers.Main) {
                     if (BuildConfig.DEBUG) {
