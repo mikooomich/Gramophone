@@ -877,11 +877,7 @@ class MqState(
             return
         }
         onDetachHead?.invoke(index)
-        detachedQueue = mq
-        this.mediaItemCount.value = mq.getSize()
-        this.currentMediaItemIndex.value = getShuffledIndex(mq)
-        this.durationMs.value = getDurationMs(mq)
-        playlistQueueSheet?.forceUpdate(index)
+        detach(mq)
     }
 
     fun detach(mq: MultiQueueObject) {
@@ -891,6 +887,8 @@ class MqState(
         }
         onDetachHead?.invoke(inactiveQueues.indexOf(mq))
         detachedQueue = mq
+        this.repeatMode.value = mq.repeatMode
+        this.shuffleModeEnabled.value = mq.shuffleModeEnabled
         this.mediaItemCount.value = mq.getSize()
         this.currentMediaItemIndex.value = getShuffledIndex(mq)
         this.durationMs.value = getDurationMs(mq)
@@ -900,6 +898,8 @@ class MqState(
     fun resetHead(updateSongList: Boolean = true) {
         onResetHead?.invoke()
         detachedQueue = null
+        this.repeatMode.value = instance.repeatMode
+        this.shuffleModeEnabled.value = instance.shuffleModeEnabled
         this.mediaItemCount.value = instance.mediaItemCount
         this.currentMediaItemIndex.value = getShuffledIndex()
         this.durationMs.value = getDurationMs()
@@ -939,7 +939,11 @@ class MqState(
 
     fun loadDetached() {
         instance.loadQueue(inactiveQueues.indexOf(detachedQueue))
-        resetHead(false)
+
+        // do not use full resetHead(false) to avoid restoring the stats of old active queue right before the new one is loaded
+        onResetHead?.invoke()
+        detachedQueue = null
+
         init()
     }
 
