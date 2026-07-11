@@ -228,7 +228,9 @@ class EndedWorkaroundPlayer(
         index: Int,
         startIndex: Int = -1
     ) {
-        Log.d(TAG, "commitQueue() called")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "commitQueue() called")
+        }
         if (index < 0 || index >= queueBoard.masterQueues.size) {
             Log.w(
                 TAG,
@@ -264,8 +266,15 @@ class EndedWorkaroundPlayer(
 //        newRepeatMode:  (@Player.RepeatMode Int)?,  // TODO: Do we want repeat mode here? its saved in addQueue internally. Do we want to do repeat mode at all?
         newShuffleOrder: CircularShuffleOrder.Persistent?,
     ): ListenableFuture<*> {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "setCurrQueueGen2() called")
+        }
+
         // different queue, do all this bs
         if (currentTitle != nextTitle) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "setCurrQueueGen2: Different queue detected")
+            }
             // nuke old inactive queue with same name, save current player queue to qb
             queueBoard.deleteQueue(nextTitle)
             if (currentTitle != null) {
@@ -304,12 +313,20 @@ class EndedWorkaroundPlayer(
             shuffleModeEnabled = newShuffleOrder != null
             return super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
         } else {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "setCurrQueueGen2: Same queue detected")
+            }
             // same queue, jump to position, or seamless edit queue
             val seamlessSupported = (startIndex < mediaItems.size)
                     && currentMediaItem?.mediaId == mediaItems[startIndex].mediaId
 
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "setCurrQueueGen2: Setting media items. seamless=$seamlessSupported")
+            }
             if (seamlessSupported) {
-                Log.d(TAG, "Trying seamless queue switch. Is first song?: ${startIndex == 0}")
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "setCurrQueueGen2: Trying seamless queue switch. Is first song?: ${startIndex == 0}")
+                }
                 val playerIndex = currentMediaItemIndex
 
                 replaceMediaItem(
