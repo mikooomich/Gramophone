@@ -216,7 +216,7 @@ class EndedWorkaroundPlayer(
     fun cloneQueue(newTitle: String, newIsPinned: Boolean, original: Boolean) {
         if (currentTitle == null && !exoPlayer.currentTimeline.isEmpty)
             throw IllegalStateException("have media items but current title is null, logic bug")
-        else if (currentTitle != null && Flags.MQ_PREVIEW) {
+        else if (currentTitle != null && exoPlayer.mediaItemCount > 0 && Flags.MQ_PREVIEW) {
             queueBoard.addQueue(
                 currentTitle!!,
                 ArrayList<MediaItem>(exoPlayer.mediaItemCount).apply {
