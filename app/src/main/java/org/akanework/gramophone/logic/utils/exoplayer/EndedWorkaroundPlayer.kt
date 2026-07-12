@@ -187,6 +187,7 @@ class EndedWorkaroundPlayer(
         startIndex: Int,
         startPositionMs: Long
     ): ListenableFuture<*> {
+        if (mediaItems.isEmpty()) return Futures.immediateVoidFuture()
         val nextTitle = mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString("mq_title")
         val mediaItems = mediaItems.toMutableList().apply {
             this[0] = this[0].buildUpon().setMediaMetadata(
@@ -286,7 +287,7 @@ class EndedWorkaroundPlayer(
             }
             // nuke old inactive queue with same name, save current player queue to qb
             queueBoard.deleteQueue(nextTitle)
-            if (currentTitle != null) {
+            if (currentTitle != null && exoPlayer.mediaItemCount > 0) {
                 queueBoard.addQueue(
                     currentTitle!!,
                     ArrayList<MediaItem>(exoPlayer.mediaItemCount).apply {

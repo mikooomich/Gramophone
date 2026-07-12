@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.size
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -45,15 +46,18 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
 import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.deleteQueue
 import org.akanework.gramophone.logic.dpToPx
 import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.logic.getInactiveQueues
+import org.akanework.gramophone.logic.getNumQueues
 import org.akanework.gramophone.logic.getQueueForUi
 import org.akanework.gramophone.logic.loadQueue
 import org.akanework.gramophone.logic.replaceAllSupport
@@ -88,6 +92,7 @@ class PlaylistQueueSheet(
     // the compose queue elements
     private var detachedHead = MutableStateFlow(false)
     private var detachedQueue: Int? = null
+    private var forceInit = MutableStateFlow(false)
 
     init {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
@@ -199,6 +204,15 @@ class PlaylistQueueSheet(
                             mqState.resetHead(false)
                             mqState.init()
                             detachedQueue = null
+                        }
+                    }
+                    val forceInitState by forceInit.collectAsState()  // TODO(MQ) there has to be a better way
+                    LaunchedEffect(forceInitState) {
+                        if (forceInitState) {
+                            mqState.init {
+                                forceUpdate()
+                            }
+                            forceInit.value = false
                         }
                     }
 
@@ -389,25 +403,25 @@ class PlaylistQueueSheet(
 
         override fun removeItem(pos: Int) {
             val instance = activity.getPlayer()
+
+            // remove queue if this is the last item, dismiss if no queues left
+            if (playlist.first.size <= 1) {
+                val status = instance?.deleteQueue(-1)
+                if (status != true) throw IllegalStateException("Failed to clear queue")
+
+                if (instance.getNumQueues() == 0) {
+                    dismiss()
+                } else {
+                    // force ui refresh
+                    forceInit.value = true
+                }
+                return
+            }
+
             val idx = playlist.first.removeAt(pos)
             playlist.first.replaceAllSupport { if (it > idx) it - 1 else it }
             instance?.removeMediaItem(idx)
             playlist.second.removeAt(idx)
-
-            // remove queue if empty, dismiss if no queues left
-            if (playlist.first.isEmpty()) {
-                val status = instance?.deleteQueue(-1)
-                if (status != true) throw IllegalStateException("Failed to clear queue")
-
-                if (true) { // TODO: how best way check if no more queues left
-                    dismiss()
-                } else {
-                    // force ui refresh
-                    detachedHead.value = true
-                    detachedQueue = -1
-                    detachedHead.value = false
-                }
-            }
 
             notifyItemRemoved(pos)
             if (pos == currentMediaItemIndex) {
@@ -460,9 +474,10 @@ class PlaylistQueueSheet(
                 if (it == -1) 0 else it
             }
             currentMediaItemIndex = i?.let { playlist.first.indexOf(i) }
-            recyclerView.post {
-                recyclerView.smoothScrollToPosition(currentMediaItemIndex ?: 0)
-            }
+            // TODO: make not crash when delete queue
+//            recyclerView.post {
+//                recyclerView.smoothScrollToPosition(currentMediaItemIndex ?: 0)
+//            }
 
             updateTimer(mq?.second?.startIndex, mq?.second?.startPositionMs)
         }

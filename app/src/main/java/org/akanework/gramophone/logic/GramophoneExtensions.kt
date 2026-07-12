@@ -81,6 +81,7 @@ import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVIC
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_AGE
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_DEL
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_GET_INACTIVE_LIST
+import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_GET_NUM_QUEUES
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_GET_QUEUE_FOR_UI
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_LOAD_QUEUE
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_PIN_QUEUE
@@ -355,6 +356,14 @@ fun MediaController.getAudioFormat(): AudioFormatDetector.AudioFormats =
             BundleCompat.getParcelable(it, "hal_format", AfFormatInfo::class.java),
             BundleCompat.getParcelable(it, "bt", BtCodecInfo::class.java)
         )
+    }
+
+fun MediaController.getNumQueues(): Int =
+    sendCustomCommand(
+        SessionCommand(SERVICE_QB_GET_NUM_QUEUES, Bundle.EMPTY),
+        Bundle.EMPTY
+    ).get().extras.run {
+        getInt("num_queues")
     }
 
 fun MediaController.getInactiveQueues(): List<MultiQueueObject> =

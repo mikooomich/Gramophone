@@ -853,7 +853,9 @@ class MqState(
         init()
     }
 
-    fun init() {
+    fun init(
+        onFinish: (() -> Unit)? = null,
+    ) {
         coroutineScope.launch {
             activeQueue = null
             detachedQueue = null
@@ -865,6 +867,7 @@ class MqState(
             instance.getInactiveQueues().toMutableList().let {
                 inactiveQueues.addAll(it)
             }
+            onFinish?.invoke()
         }
     }
 
@@ -925,10 +928,21 @@ class MqState(
         resetHead()
     }
 
-    fun removeQueue(index: Int = inactiveQueues.size - 1) {
+    fun removeQueue(index: Int = -1) {
         val status = instance.deleteQueue(index)
-        if (!status) return
-        init()
+        if (!status) throw IllegalStateException("Failed to clear queue")
+
+        if (index >= 0 && index < inactiveQueues.size && inactiveQueues[index] == detachedQueue) {
+            // this detached queue will so disappear just like my hopes and dreams. Switch off it
+            resetHead()
+        }
+
+        init {
+            // update queue list for active queue
+            if (index == -1) {
+                playlistQueueSheet?.forceUpdate() // TODO: why the hell does this load the last queue but the same function call with 10x the jank in the other place work
+            }
+        }
         detachedQueue?.repeatMode?.let {
             onRepeatModeChanged(it)
         }

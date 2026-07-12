@@ -174,6 +174,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         const val SERVICE_TIMER_CHANGED = "changed_timer"
 
         const val SERVICE_QB_GET_INACTIVE_LIST = "qb_get_inactive_list"
+        const val SERVICE_QB_GET_NUM_QUEUES = "qb_get_num_queues"
         const val SERVICE_QB_LOAD_QUEUE = "qb_load"
         const val SERVICE_QB_GET_QUEUE_FOR_UI = "qb_get_queue_for_ui"
         const val SERVICE_QB_DEL = "qb_delete"
@@ -802,6 +803,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         availableSessionCommands.add(SessionCommand(SERVICE_QUERY_TIMER, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_AUDIO_FORMAT, Bundle.EMPTY))
+        availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_NUM_QUEUES, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_INACTIVE_LIST, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_QUEUE_FOR_UI, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_LOAD_QUEUE, Bundle.EMPTY))
@@ -1002,6 +1004,13 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 SERVICE_GET_LYRICS -> {
                     SessionResult(SessionResult.RESULT_SUCCESS).also {
                         it.extras.putParcelable("lyrics", lyrics)
+                    }
+                }
+
+                SERVICE_QB_GET_NUM_QUEUES -> {
+                    SessionResult(SessionResult.RESULT_SUCCESS).also { res ->
+                       val numQueues = qb.masterQueues.size + if (endedWorkaroundPlayer!!.currentTitle == null) 0 else 1
+                        res.extras.putInt("num_queues", numQueues)
                     }
                 }
 
