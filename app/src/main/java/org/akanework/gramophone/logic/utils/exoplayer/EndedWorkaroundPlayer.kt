@@ -18,28 +18,21 @@
 package org.akanework.gramophone.logic.utils.exoplayer
 
 import android.os.Bundle
-import androidx.core.os.BundleCompat
-import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.ForwardingSimpleBasePlayer
 import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.Log
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ShuffleOrder
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import org.akanework.gramophone.BuildConfig
-import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.MultiQueueObject
 import org.akanework.gramophone.logic.QueueBoard
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
-import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.logic.utils.SemanticLyrics
 import org.json.JSONObject
 import uk.akane.libphonograph.items.EXTRA_HD_ARTWORK_URI
-import uk.akane.libphonograph.items.artistId
 import uk.akane.libphonograph.items.hdArtworkUri
 import java.util.Objects
 
@@ -212,8 +205,8 @@ class EndedWorkaroundPlayer(
             startIndex = startIndex,
             startPositionMs = startPositionMs,
             nextTitle = nextTitle ?: "Unknown Queue TODO",
-            newIsPinned = false,
-            newIsOriginal = true,
+            nextIsPinned = null,
+            nextIsOriginal = true,
             newShuffleOrder = null
         )
     }
@@ -226,7 +219,7 @@ class EndedWorkaroundPlayer(
      */
     fun commitQueue(
         index: Int,
-        startIndex: Int = -1
+        startIndex: Int? = null,
     ) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "commitQueue() called")
@@ -240,14 +233,15 @@ class EndedWorkaroundPlayer(
         }
 
         val mq = queueBoard.masterQueues[index]
-        setCurrQueueGen2(mq)
+        setCurrQueueGen2(mq, startIndex)
     }
 
     fun setCurrQueueGen2(
-        mq: MultiQueueObject
+        mq: MultiQueueObject,
+        startIndex: Int? = null,
     ) = setCurrQueueGen2(
         mq.queue,
-        mq.startIndex,
+        startIndex ?: mq.startIndex,
         mq.startPositionMs,
         mq.title,
         mq.expiry.value == null,
@@ -255,15 +249,30 @@ class EndedWorkaroundPlayer(
         mq.shuffleOrder,
     )
 
+    /**
+     * Load a new queue into the player. Calling this function will automatically handle saving the
+     * existing active queue from the player, and subsequently loading the new inactive queue, and
+     * updating the active queue metadata in EWP. When nextTitle is same as the currentTitle, this
+     * function will not interact with QueueBoard. Furthermore, in special cases (where startIndex
+     * is the same song as the currently playing song) a seamless transition without interrupting
+     * playback is possible. 
+     *
+     * @param mediaItems
+     * @param startIndex
+     * @param startPositionMs
+     * @param nextTitle
+     * @param nextIsPinned True or False are acceptable values. null for a no-op.
+     * @param nextIsOriginal True or False are acceptable values. null for a no-op.
+     * @param newShuffleOrder Specify a shuffle order. null for a no-op.
+     */
     fun setCurrQueueGen2(
-//        mq: MultiQueueObject
         mediaItems: List<MediaItem>,
         startIndex: Int,
         startPositionMs: Long,
         nextTitle: String,
-        newIsPinned: Boolean,
-        newIsOriginal: Boolean,
-//        newRepeatMode:  (@Player.RepeatMode Int)?,  // TODO: Do we want repeat mode here? its saved in addQueue internally. Do we want to do repeat mode at all?
+        nextIsPinned: Boolean?,
+        nextIsOriginal: Boolean?,
+//        nextRepeatMode:  (@Player.RepeatMode Int)?,  // TODO: Do we want repeat mode at all? rn it's saved in addQueue internally
         newShuffleOrder: CircularShuffleOrder.Persistent?,
     ): ListenableFuture<*> {
         if (BuildConfig.DEBUG) {
@@ -304,9 +313,13 @@ class EndedWorkaroundPlayer(
 
             // load current queue into player
             currentTitle = nextTitle
-            currentIsPinned = newIsPinned
-            currentIsOriginal = newIsOriginal
-//            newRepeatMode?.let {
+            nextIsPinned?.let {
+                currentIsPinned = it
+            }
+            nextIsOriginal?.let {
+                currentIsOriginal = it
+            }
+//            nextRepeatMode?.let {
 //                repeatMode = it
 //            }
             nextShuffleOrder = newShuffleOrder?.toFactory()
@@ -329,32 +342,36 @@ class EndedWorkaroundPlayer(
                 }
                 val playerIndex = currentMediaItemIndex
 
-                replaceMediaItem(
+                handleReplaceMediaItems(
                     playerIndex,
-                    mediaItems[playerIndex]
+                    playerIndex + 1,
+                    listOf(mediaItems[playerIndex])
                 ) // update current's metadata
                 if (startIndex == 0) {
                     // remove all songs before the currently playing one and then replace all the items after
                     if (playerIndex > 0) {
                         removeMediaItems(0, playerIndex)
                     }
-                    replaceMediaItems(1, Int.MAX_VALUE, mediaItems.drop(1))
+                    handleReplaceMediaItems(1, Int.MAX_VALUE, mediaItems.drop(1))
                 } else {
                     // replace items up to current playing, then replace items after current
-                    replaceMediaItems(
+                    handleReplaceMediaItems(
                         0, playerIndex,
                         mediaItems.subList(0, startIndex)
                     )
-                    replaceMediaItems(
+                    handleReplaceMediaItems(
                         startIndex + 1, Int.MAX_VALUE,
                         mediaItems.subList(startIndex + 1, mediaItems.size)
                     )
                 }
 
-                currentTitle = nextTitle
-                currentIsPinned = newIsPinned
-                currentIsOriginal = newIsOriginal
-//                newRepeatMode?.let {
+                nextIsPinned?.let {
+                    currentIsPinned = it
+                }
+                nextIsOriginal?.let {
+                    currentIsOriginal = it
+                }
+//                nextRepeatMode?.let {
 //                    repeatMode = it
 //                }
                 newShuffleOrder?.let {
@@ -369,10 +386,13 @@ class EndedWorkaroundPlayer(
                 shuffleModeEnabled = newShuffleOrder != null
                 return Futures.immediateVoidFuture()
             } else {
-                currentTitle = nextTitle
-                currentIsPinned = newIsPinned
-                currentIsOriginal = newIsOriginal
-//                newRepeatMode?.let {
+                nextIsPinned?.let {
+                    currentIsPinned = it
+                }
+                nextIsOriginal?.let {
+                    currentIsOriginal = it
+                }
+//                nextRepeatMode?.let {
 //                    repeatMode = it
 //                }
                 nextShuffleOrder = newShuffleOrder?.toFactory()
