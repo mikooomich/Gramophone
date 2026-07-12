@@ -80,8 +80,11 @@ import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
 import androidx.media3.session.MediaBrowser
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.MultiQueueObject
 import org.akanework.gramophone.logic.age
@@ -940,7 +943,12 @@ class MqState(
         init {
             // update queue list for active queue
             if (index == -1) {
-                playlistQueueSheet?.forceUpdate() // TODO: why the hell does this load the last queue but the same function call with 10x the jank in the other place work
+                coroutineScope.launch(Dispatchers.IO) {
+                    delay(300L)
+                    withContext(Dispatchers.Main) {
+                        playlistQueueSheet?.forceUpdate() // TODO: WHY IS THIS A RACE CONDITION WHAAAATTTT
+                    }
+                }
             }
         }
         detachedQueue?.repeatMode?.let {
