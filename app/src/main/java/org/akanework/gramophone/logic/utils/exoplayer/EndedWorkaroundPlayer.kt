@@ -213,6 +213,7 @@ class EndedWorkaroundPlayer(
                 nextRepeatMode = null,
                 nextShuffleOrder = null
             )
+            Futures.immediateVoidFuture()
         } else {
             super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
         }
@@ -280,9 +281,9 @@ class EndedWorkaroundPlayer(
         nextTitle: String,
         nextIsPinned: Boolean?,
         nextIsOriginal: Boolean?,
-        nextRepeatMode:  (@Player.RepeatMode Int)?,
+        nextRepeatMode: (@Player.RepeatMode Int)?,
         nextShuffleOrder: CircularShuffleOrder.Persistent?,
-    ): ListenableFuture<*> {
+    ) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "setCurrQueueGen2() called")
         }
@@ -332,7 +333,7 @@ class EndedWorkaroundPlayer(
             }
             this@EndedWorkaroundPlayer.nextShuffleOrder = nextShuffleOrder?.toFactory()
             shuffleModeEnabled = nextShuffleOrder != null
-            return super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
+            setMediaItems(mediaItems, startIndex, startPositionMs)
         } else {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "setCurrQueueGen2: Same queue detected")
@@ -392,7 +393,6 @@ class EndedWorkaroundPlayer(
                     )
                 }
                 shuffleModeEnabled = nextShuffleOrder != null
-                return Futures.immediateVoidFuture()
             } else {
                 nextIsPinned?.let {
                     currentIsPinned = it
@@ -405,7 +405,7 @@ class EndedWorkaroundPlayer(
                 }
                 this@EndedWorkaroundPlayer.nextShuffleOrder = nextShuffleOrder?.toFactory()
                 shuffleModeEnabled = nextShuffleOrder != null
-                return super.handleSetMediaItems(mediaItems, startIndex, startPositionMs)
+                setMediaItems(mediaItems, startIndex, startPositionMs)
             }
         }
 

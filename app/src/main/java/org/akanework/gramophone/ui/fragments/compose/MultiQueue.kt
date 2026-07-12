@@ -78,6 +78,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.REPEAT_MODE_ALL
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import androidx.media3.common.Player.REPEAT_MODE_ONE
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaBrowser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -941,14 +942,14 @@ class MqState(
         }
 
         init {
-            // update queue list for active queue
+            // wait for MediaBrowser to update before updating recycler
             if (index == -1) {
-                coroutineScope.launch(Dispatchers.IO) {
-                    delay(300L)
-                    withContext(Dispatchers.Main) {
-                        playlistQueueSheet?.forceUpdate() // TODO: WHY IS THIS A RACE CONDITION WHAAAATTTT
+                instance.addListener(object : Player.Listener {
+                    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                        instance.removeListener(this)
+                        playlistQueueSheet?.forceUpdate()
                     }
-                }
+                })
             }
         }
         detachedQueue?.repeatMode?.let {

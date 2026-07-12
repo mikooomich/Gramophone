@@ -209,7 +209,13 @@ class PlaylistQueueSheet(
                     LaunchedEffect(forceInitState) {
                         if (forceInitState) {
                             mqState.init {
-                                forceUpdate()
+                                // wait for MediaBrowser to update before updating recycler
+                                instance?.addListener(object : Player.Listener {
+                                    override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                                        instance!!.removeListener(this)
+                                        forceUpdate()
+                                    }
+                                })
                             }
                             forceInit.value = false
                         }
