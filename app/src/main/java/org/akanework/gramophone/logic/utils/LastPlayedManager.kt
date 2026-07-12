@@ -166,7 +166,7 @@ class LastPlayedManager(
         }
     }
 
-    suspend fun restore(callback: (MediaItemsWithStartPosition?) -> Unit) {
+    suspend fun restore(callback: (MediaItemsWithStartPosition?, Int, CircularShuffleOrder.Persistent?) -> Unit) {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "decoding playlist...")
         }
@@ -188,7 +188,7 @@ class LastPlayedManager(
                 val lastPlayedIdx = prefs.getInt("last_played_idx", 0)
                 val lastPlayedPos = prefs.getLong("last_played_pos", 0)
                 if (lastPlayedGrp == null || lastPlayedLst == null) {
-                    withContext(Dispatchers.Main) { callback(null) }
+                    withContext(Dispatchers.Main) { callback(null, 0, null) }
                     return@withContext
                 }
                 val repeatMode = prefs.getInt("repeat_mode", Player.REPEAT_MODE_OFF)
@@ -323,7 +323,7 @@ class LastPlayedManager(
                                     "shuffle $shuffleModeEnabled, ended $ended)..."
                         )
                     }
-                    callback(data)
+                    callback(data, repeatMode, seed)
                 }
                 return@withContext
             } catch (e: Exception) {
@@ -332,7 +332,7 @@ class LastPlayedManager(
                 } catch (_: Exception) {
                 }
                 Log.e(TAG, Log.getThrowableString(e)!!)
-                withContext(Dispatchers.Main) { callback(null) }
+                withContext(Dispatchers.Main) { callback(null, 0, null) }
                 return@withContext
             }
         }
