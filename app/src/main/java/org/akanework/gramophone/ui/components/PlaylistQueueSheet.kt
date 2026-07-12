@@ -72,8 +72,6 @@ import java.util.LinkedList
 
 // TODO:
 //  queue menu flickers when queue sheet isnt full height
-//  deleteing queue race condition with dumpplaylist
-//  remove last inactive queue shows oh no! and cant collapse list anymore
 //  unique(title, isOriginal) for queue title checks. separate (+) indicator. show id for queue
 class PlaylistQueueSheet(
     context: Context, private val activity: MainActivity

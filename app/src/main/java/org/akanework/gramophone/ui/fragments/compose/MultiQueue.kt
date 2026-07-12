@@ -47,6 +47,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -316,6 +317,13 @@ fun QueueInfo(
     val MediumCornerRadius = 12.dp
     // clean up later
 
+    LaunchedEffect(mqState.inactiveQueues.size) {
+        if (mqState.inactiveQueues.isEmpty()) {
+            mqState.resetHead()
+            mqState.toggleExpand()
+        }
+    }
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -409,15 +417,6 @@ fun MqList(
             .fillMaxWidth()
             .nestedScroll(rememberNestedScrollInteropConnection())
     ) {
-        if (mqState.inactiveQueues.isEmpty()) {
-            item {
-                EmptyPlaceholder(
-                    icon = Icons.AutoMirrored.Rounded.List,
-                    text = stringResource(R.string.oh_no),
-                    modifier = Modifier.animateItem()
-                )
-            }
-        }
         itemsIndexed(
             items = mqState.inactiveQueues,
             key = { _, item -> item.id },
