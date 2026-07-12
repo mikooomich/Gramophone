@@ -54,7 +54,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
-import androidx.core.net.toFile
 import androidx.core.os.BundleCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -89,12 +88,14 @@ import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVIC
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_REORDER
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QB_UNPIN_QUEUE
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_QUERY_TIMER
+import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_SET_MEDIA_ITEMS_NEW
 import org.akanework.gramophone.logic.GramophonePlaybackService.Companion.SERVICE_SET_TIMER
 import org.akanework.gramophone.logic.utils.AfFormatInfo
 import org.akanework.gramophone.logic.utils.AudioFormatDetector
 import org.akanework.gramophone.logic.utils.AudioTrackInfo
 import org.akanework.gramophone.logic.utils.BtCodecInfo
 import org.akanework.gramophone.logic.utils.CalculationUtils
+import org.akanework.gramophone.logic.utils.CircularShuffleOrder
 import org.akanework.gramophone.logic.utils.MediaItemList
 import org.akanework.gramophone.logic.utils.ReplayGainUtil
 import org.akanework.gramophone.logic.utils.SemanticLyrics
@@ -102,10 +103,8 @@ import org.akanework.gramophone.ui.MainActivity
 import org.jetbrains.annotations.Contract
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
-import uk.akane.libphonograph.items.EXTRA_AUTHOR
 import uk.akane.libphonograph.items.EXTRA_FILE
 import java.io.File
-import java.io.FileInputStream
 import java.util.Locale
 import kotlin.math.max
 
@@ -303,6 +302,27 @@ fun MediaController.setTimer(value: Int, waitUntilSongEnd: Boolean) {
         }, Bundle.EMPTY
     )
 }
+
+fun MediaController.setMediaItemsNew(
+    items: List<MediaItem>,
+    title: String,
+    startIndex: Int = C.INDEX_UNSET,
+    startPositionMs: Long = C.TIME_UNSET,
+    repeatMode: Int? = null,
+    shuffleOrder: CircularShuffleOrder.Persistent? = null
+) = sendCustomCommand(
+    SessionCommand(SERVICE_SET_MEDIA_ITEMS_NEW, Bundle.EMPTY).apply {
+        customExtras.apply {
+            putBinder("items", MediaItemList(items))
+            putInt("startIndex", startIndex)
+            putLong("startPositionMs", startPositionMs)
+            putString("mq_title", title)
+
+            repeatMode?.let { putInt("repeatMode", it) }
+            shuffleOrder?.let { putParcelable("shuffleOrder", it) }
+        }
+    }, Bundle.EMPTY
+)
 
 inline fun <reified T> MutableList<T>.forEachSupport(skipFirst: Int = 0, operator: (T) -> Unit) {
     val li = listIterator()
@@ -792,19 +812,6 @@ operator fun PaddingValues.plus(other: PaddingValues): PaddingValues = PaddingVa
             other.calculateEndPadding(LayoutDirection.Ltr),
     bottom = this.calculateBottomPadding() + other.calculateBottomPadding(),
 )
-
-fun queueWithTitle(mediaItems: List<MediaItem>, mqTitle: String?): List<MediaItem> {
-    if (mediaItems.isEmpty() || mqTitle == null) return mediaItems
-    val firstMediaItem = mediaItems.first()
-    val newFirstMediaItem = firstMediaItem.buildUpon().setMediaMetadata(
-        firstMediaItem.mediaMetadata.buildUpon().setExtras(
-            (firstMediaItem.mediaMetadata.extras?.let { Bundle(it) } ?: Bundle()).apply {
-                putString("mq_title", mqTitle)
-            }
-        ).build()
-    ).build()
-    return listOf(newFirstMediaItem) + mediaItems.drop(1)
-}
 
 fun ContentResolver.queryWithPending(uri: Uri, projection: Array<String>, selection: String?,
                                      selectionArgs: Array<String>?, sortOrder: String?,

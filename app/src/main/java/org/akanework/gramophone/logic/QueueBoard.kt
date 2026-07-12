@@ -131,6 +131,7 @@ class QueueBoard(
         startPositionMs: Long?,
         shouldPin: Boolean,
         isOriginal: Boolean,
+        repeatMode: (@Player.RepeatMode Int)?,
         shuffleOrder: CircularShuffleOrder.Persistent?,
         ended: Boolean,
     ): MultiQueueObject {
@@ -158,7 +159,7 @@ class QueueBoard(
             queue = ArrayList(mediaList),
             startIndex = mediaItemIndex,
             startPositionMs = startPositionMs ?: C.TIME_UNSET,
-            repeatMode = player.endedWorkaroundPlayer!!.repeatMode,
+            repeatMode = repeatMode ?: 0,
             shuffleOrder = shuffleOrder,
             ended = ended,
             isOriginal = isOriginal,
@@ -419,7 +420,7 @@ data class MultiQueueObject(
             putInt("startIndex", startIndex)
             putLong("startPositionMs", startPositionMs)
             putInt("repeatMode", repeatMode)
-            putBoolean("shuffleModeEnabled", shuffleModeEnabled)
+
             putBoolean("ended", ended)
             putBoolean("isOriginal", isOriginal)
             putParcelable("shuffleOrder", shuffleOrder)

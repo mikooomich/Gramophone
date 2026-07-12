@@ -53,7 +53,7 @@ import org.akanework.gramophone.logic.enableEdgeToEdgePaddingListener
 import org.akanework.gramophone.logic.needsManualSnackBarInset
 import org.akanework.gramophone.logic.updateMargin
 import org.akanework.gramophone.logic.utils.SdScanner
-import org.akanework.gramophone.logic.queueWithTitle
+import org.akanework.gramophone.logic.setMediaItemsNew
 import org.akanework.gramophone.ui.MainActivity
 import org.akanework.gramophone.ui.adapters.ViewPager2Adapter
 import org.akanework.gramophone.ui.components.PlayerBottomSheet
@@ -197,8 +197,8 @@ class ViewPagerFragment : BaseFragment(true) {
                     runBlocking { activity.reader.songListFlow.first() }.takeIf { it.isNotEmpty() }
                         ?.also {
                             controller?.shuffleModeEnabled = true
-                            controller?.setMediaItems(
-                                queueWithTitle(it, context?.getString(R.string.category_songs))
+                            controller?.setMediaItemsNew(
+                                it, context?.getString(R.string.category_songs)!!
                             )
                             controller?.prepare()
                             controller?.play()

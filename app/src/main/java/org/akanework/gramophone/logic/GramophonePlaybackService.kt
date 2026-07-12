@@ -49,7 +49,6 @@ import androidx.core.content.IntentCompat
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
-import androidx.media3.common.BundleListRetriever
 import androidx.media3.common.C
 import androidx.media3.common.DeviceInfo
 import androidx.media3.common.Format
@@ -67,7 +66,6 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.Log
-import androidx.media3.common.util.Util
 import androidx.media3.common.util.Util.isBitmapFactorySupportedMimeType
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -96,13 +94,10 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.google.common.collect.ImmutableList
-import com.google.common.util.concurrent.AsyncFunction
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -144,7 +139,6 @@ import uk.akane.libphonograph.manipulator.ItemManipulator
 import uk.akane.libphonograph.manipulator.PlaylistSerializer
 import uk.akane.libphonograph.manipulator.PlaylistSerializer.Entry
 import java.util.concurrent.Executor
-import java.util.concurrent.TimeUnit
 import kotlin.collections.emptyList
 import kotlin.random.Random
 
@@ -172,6 +166,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         const val SERVICE_GET_AUDIO_FORMAT = "get_audio_format"
         const val SERVICE_GET_LYRICS = "get_lyrics"
         const val SERVICE_TIMER_CHANGED = "changed_timer"
+        const val SERVICE_SET_MEDIA_ITEMS_NEW = "set_media_items_new"
 
         const val SERVICE_QB_GET_INACTIVE_LIST = "qb_get_inactive_list"
         const val SERVICE_QB_GET_NUM_QUEUES = "qb_get_num_queues"
@@ -803,6 +798,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         availableSessionCommands.add(SessionCommand(SERVICE_QUERY_TIMER, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_LYRICS, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_GET_AUDIO_FORMAT, Bundle.EMPTY))
+        availableSessionCommands.add(SessionCommand(SERVICE_SET_MEDIA_ITEMS_NEW, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_NUM_QUEUES, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_INACTIVE_LIST, Bundle.EMPTY))
         availableSessionCommands.add(SessionCommand(SERVICE_QB_GET_QUEUE_FOR_UI, Bundle.EMPTY))
@@ -927,6 +923,30 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     ): ListenableFuture<SessionResult> {
         return Futures.immediateFuture(
             when (customCommand.customAction) {
+                SERVICE_SET_MEDIA_ITEMS_NEW -> {
+                    val mediaItems = MediaItemList.getList(
+                        customCommand.customExtras.getBinder("items")!!)
+                    val startIndex = customCommand.customExtras.getInt("startIndex")
+                    val startPositionMs = customCommand.customExtras.getLong("startPositionMs")
+                    val title = customCommand.customExtras.getString("mq_title")?: "Unknown Queue TODO"
+
+                    val repeatMode: @Player.RepeatMode Int = customCommand.customExtras.getInt("repeatMode")
+                    val shuffleOrder = customCommand.customExtras.getParcelable<CircularShuffleOrder.Persistent>("shuffleOrder")
+
+                    endedWorkaroundPlayer!!.setCurrQueueGen2(
+                        mediaItems = mediaItems,
+                        startIndex = startIndex,
+                        startPositionMs = startPositionMs,
+                        nextTitle = title,
+                        nextIsPinned = null,
+                        nextIsOriginal = true,
+                        nextRepeatMode = repeatMode,
+                        nextShuffleOrder = shuffleOrder
+                    )
+
+                    SessionResult(SessionResult.RESULT_SUCCESS)
+                }
+
                 SERVICE_SET_TIMER -> {
                     // 0 = clear timer; 0 with pauseOnEnd true will pause on end of current song
                     val duration = customCommand.customExtras.getInt("duration")

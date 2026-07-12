@@ -35,7 +35,7 @@ import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.ui.ItemHeightHelper
 import org.akanework.gramophone.logic.ui.MyRecyclerView
 import org.akanework.gramophone.logic.ui.QuickLinearSmoothScroller
-import org.akanework.gramophone.logic.queueWithTitle
+import org.akanework.gramophone.logic.setMediaItemsNew
 import org.akanework.gramophone.ui.fragments.AdapterFragment
 import org.akanework.gramophone.ui.getAdapterType
 
@@ -174,12 +174,7 @@ open class BaseDecorAdapter<T : AdapterFragment.BaseInterface<*>>(
                 controller?.apply {
                     shuffleModeEnabled = false
                     repeatMode = REPEAT_MODE_OFF
-                    setMediaItems(
-                        queueWithTitle(
-                            songList,
-                            runBlocking { adapter.queueTitle!!.first() }
-                        )
-                    )
+                    setMediaItemsNew(songList, runBlocking { adapter.queueTitle!!.first() })
                     if (songList.isNotEmpty()) {
                         prepare()
                         play()
@@ -192,11 +187,8 @@ open class BaseDecorAdapter<T : AdapterFragment.BaseInterface<*>>(
                     repeatMode = REPEAT_MODE_OFF
                     shuffleModeEnabled = false
                     list.takeIf { it.isNotEmpty() }?.also { albums ->
-                        setMediaItems(
-                            queueWithTitle(
-                                albums.flatMap { it.songList },
-                                runBlocking { adapter.queueTitle.first() }
-                            )
+                        setMediaItemsNew(
+                            albums.flatMap { it.songList }, runBlocking { adapter.queueTitle.first() }
                         )
                         prepare()
                         play()
@@ -211,11 +203,8 @@ open class BaseDecorAdapter<T : AdapterFragment.BaseInterface<*>>(
                 val controller = adapter.getActivity().getPlayer()
                 controller?.apply {
                     shuffleModeEnabled = true
-                    setMediaItems(
-                        queueWithTitle(
-                            songList,
-                            runBlocking { adapter.queueTitle!!.first() }
-                        )
+                    setMediaItemsNew(
+                        songList, runBlocking { adapter.queueTitle!!.first() }
                     )
                     if (songList.isNotEmpty()) {
                         prepare()
@@ -229,12 +218,10 @@ open class BaseDecorAdapter<T : AdapterFragment.BaseInterface<*>>(
                     repeatMode = REPEAT_MODE_OFF
                     shuffleModeEnabled = false
                     list.takeIf { it.isNotEmpty() }?.also { albums ->
-                        setMediaItems(
-                            queueWithTitle(
-                                albums.shuffled().flatMap { it.songList },
-                                context.getString(R.string.shuffled,
-                                    runBlocking { adapter.queueTitle.first() })
-                            )
+                        setMediaItemsNew(
+                            albums.shuffled().flatMap { it.songList },
+                            context.getString(R.string.shuffled,
+                                runBlocking { adapter.queueTitle.first() })
                         )
                         prepare()
                         play()
