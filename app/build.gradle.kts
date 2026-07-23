@@ -306,9 +306,14 @@ aboutLibraries {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":hificore"))
     implementation(project(":misc:alacdecoder"))
+    implementation("androidx.test:core-ktx:1.7.0")
     val composeBom = platform("androidx.compose:compose-bom:2025.05.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
