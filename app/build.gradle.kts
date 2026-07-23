@@ -305,6 +305,10 @@ aboutLibraries {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(project(":hificore"))
     implementation(project(":misc:alacdecoder"))
