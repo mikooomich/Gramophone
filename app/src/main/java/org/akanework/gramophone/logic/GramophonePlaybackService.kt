@@ -72,6 +72,8 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.analytics.PlaybackStats
+import androidx.media3.exoplayer.analytics.PlaybackStatsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
@@ -115,6 +117,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.guava.await
 import org.akanework.gramophone.R
+import org.akanework.gramophone.db.InternalDatabase
+import org.akanework.gramophone.db.MusicDatabase
 import org.akanework.gramophone.logic.ui.MeiZuLyricsMediaNotificationProvider
 import org.akanework.gramophone.logic.ui.isManualNotificationUpdate
 import org.akanework.gramophone.logic.utils.AfFormatInfo
@@ -163,7 +167,7 @@ import kotlin.random.Random
  */
 class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Listener,
     MediaLibrarySession.Callback, Player.Listener, AnalyticsListener,
-    SharedPreferences.OnSharedPreferenceChangeListener {
+     PlaybackStatsListener.Callback, SharedPreferences.OnSharedPreferenceChangeListener {
 
     companion object {
         private const val TAG = "GramoPlaybackService"
@@ -244,6 +248,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     private val lyricsFetcher = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
     private val bitrateFetcher = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
 
+    private lateinit var database: MusicDatabase
     private fun getRepeatCommand() =
         when (controller!!.repeatMode) {
             Player.REPEAT_MODE_OFF -> customCommands[2]
@@ -327,6 +332,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         nm = NotificationManagerCompat.from(this)
         prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         qb = QueueBoard(this)
+        database = InternalDatabase.newInstance(this)
         setListener(this)
         setMediaNotificationProvider(
             MeiZuLyricsMediaNotificationProvider(this) { lastSentHighlightedLyric }
@@ -1664,6 +1670,31 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                         Random.nextLong()
                     )
                 )
+            }
+        }
+    }
+
+    override fun onPlaybackStatsReady(
+        eventTime: AnalyticsListener.EventTime,
+        playbackStats: PlaybackStats
+    ) {
+        val mediaItem =
+            eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+
+        var minPlaybackDur = 0.05f // TODO: temp
+        // ensure within bounds
+        if (minPlaybackDur >= 1f) {
+            minPlaybackDur = 0.99f // Ehhh 99 is good enough to avoid any rounding errors
+        } else if (minPlaybackDur < 0.01f) {
+            minPlaybackDur = 0.01f // Still want "spam skipping" to not count as plays
+        }
+
+        val playRatio =
+            playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.mediaMetadata.durationMs) ?: -1)
+        android.util.Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
+        if (playRatio >= minPlaybackDur) {
+            scope.launch {
+                database.recordEvent(mediaItem, System.currentTimeMillis(), playbackStats.totalPlayTimeMs)
             }
         }
     }
