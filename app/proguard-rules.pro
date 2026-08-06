@@ -66,3 +66,10 @@
 -keep,allowshrinking class org.akanework.gramophone.ui.state.HomeViewModel
 -keep,allowshrinking class org.nift4.gramophone.hificore.UacManager
 -keep,allowshrinking class uk.akane.libphonograph.reader.FlowReader
+
+# temp databases stuff
+-keep class wah.mikooomich.ffMetadataEx.** { *; }
+-keep class io.github.anilbeesetti.nextlib.media3ext.ffdecoder.** { *; }
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

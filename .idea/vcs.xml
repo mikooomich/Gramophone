@@ -3,6 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/hificore/src/main/cpp/farbot" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/hificore/src/main/cpp/farbot/googletest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/hificore/src/main/cpp/libusb-cmake" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/media3" vcs="Git" />
   </component>
