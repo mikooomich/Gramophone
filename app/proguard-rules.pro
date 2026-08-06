@@ -45,3 +45,9 @@
     onMoreData(...);
     onCanWriteMoreData(...);
 }
+
+-keep class wah.mikooomich.ffMetadataEx.** { *; }
+-keep class io.github.anilbeesetti.nextlib.media3ext.ffdecoder.** { *; }
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
