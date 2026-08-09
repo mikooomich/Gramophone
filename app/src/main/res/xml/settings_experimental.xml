@@ -72,6 +72,24 @@
             android:widgetLayout="@layout/preference_switch_widget"
             app:iconSpaceReserved="false" />
 
+        <Preference
+            android:key="backup"
+            android:layout="@layout/preference_basic"
+            android:title="Backup"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="restore"
+            android:layout="@layout/preference_basic"
+            android:title="Restore"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="debug_pc"
+            android:layout="@layout/preference_basic"
+            android:title="debug_pc"
+            app:iconSpaceReserved="false" />
+
     </PreferenceCategory>
 
 
