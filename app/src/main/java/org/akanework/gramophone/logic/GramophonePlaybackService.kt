@@ -117,6 +117,8 @@ import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.library.LibraryWriteRepository
 import org.akanework.gramophone.db.InternalDatabase
 import org.akanework.gramophone.db.MusicDatabase
+import org.akanework.gramophone.db.AppDatabase
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.ui.MeiZuLyricsMediaNotificationProvider
 import org.akanework.gramophone.logic.ui.isManualNotificationUpdate
 import org.akanework.gramophone.logic.utils.AfFormatInfo
@@ -124,6 +126,7 @@ import org.akanework.gramophone.logic.utils.AfFormatTracker
 import org.akanework.gramophone.logic.utils.AudioTrackInfo
 import org.akanework.gramophone.logic.utils.BtCodecInfo
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
+import org.akanework.gramophone.logic.utils.FFmpegScanner
 import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.logic.utils.LastPlayedManager
 import org.akanework.gramophone.logic.utils.LrcUtils.LrcParserOptions
@@ -151,6 +154,7 @@ import uk.akane.libphonograph.dynamicitem.Favorite
 import uk.akane.libphonograph.items.albumId
 import uk.akane.libphonograph.manipulator.PlaylistSerializer.Entry
 import uk.akane.libphonograph.reader.FlowReader
+import java.io.File
 import java.util.concurrent.Executor
 import kotlin.random.Random
 
@@ -244,7 +248,9 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     private val lyricsFetcher = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
     private val bitrateFetcher = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
 
-    private lateinit var database: MusicDatabase
+    // make prettier later
+    private lateinit var playbackStatsListener: PlaybackStatsListener
+    lateinit var database: GramophoneDatabase
     private fun getRepeatCommand() =
         when (controller!!.repeatMode) {
             Player.REPEAT_MODE_OFF -> customCommands[2]
@@ -328,7 +334,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         nm = NotificationManagerCompat.from(this)
         prefs = defaultPrefs
         qb = QueueBoard(this)
-        database = InternalDatabase.newInstance(this)
+        database = AppDatabase.newInstance(this)
         setListener(this)
         setMediaNotificationProvider(
             MeiZuLyricsMediaNotificationProvider(this) { lastSentHighlightedLyric }
@@ -461,9 +467,10 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             queueBoard = qb,
             getNotificationLyric = { lastSentNotificationLyric }
         )
+        playbackStatsListener = PlaybackStatsListener(false, this)
         player.exoPlayer.addAnalyticsListener(EventLogger())
         player.exoPlayer.addAnalyticsListener(afFormatTracker)
-        player.exoPlayer.addAnalyticsListener(this)
+        player.exoPlayer.addAnalyticsListener(playbackStatsListener)
         player.exoPlayer.setShuffleOrder(CircularShuffleOrder(player, 0, 0, Random.nextLong()))
         lastPlayedManager = LastPlayedManager(this, player)
         lastPlayedManager.allowSavingState = false
@@ -789,7 +796,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         unregisterReceiver(btReceiver)
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         // Important: this must happen before sending stop() as that changes state ENDED -> IDLE
-        lastPlayedManager.save()
+        lastPlayedManager.saveAll()
         scope.cancel()
         endedWorkaroundPlayer!!.stop()
         handler.removeCallbacks(timer)
@@ -1215,8 +1222,14 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                         try {
                             val nextQueueIndex = qb.getInactiveQueues().size - 1
                             if (nextQueueIndex < 0) {
+                                val currentQueueId = endedWorkaroundPlayer!!.currentQueueId
                                 plr.clearMediaItems()
                                 refreshLevel = CLIENT_QB_REFRESH_CLEAR
+                                scope.launch(Dispatchers.IO) {
+                                    currentQueueId?.let {
+                                        database.deleteQueue(it)
+                                    }
+                                }
                                 true
                             } else {
                                 val currentQueueId = plr.currentQueueId
@@ -1225,6 +1238,9 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                                 currentQueueId?.let {
                                     // TODO: nick plz do delete active queue if this is too cursed
                                     qb.deleteQueue(currentQueueId)
+                                    scope.launch(Dispatchers.IO) {
+                                        database.deleteQueue(currentQueueId)
+                                    }
                                 }
                                 refreshLevel = CLIENT_QB_REFRESH_ALL
                                 true
@@ -1237,7 +1253,13 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     } else {
                         // inactive queues
                         refreshLevel = CLIENT_QB_REFRESH_QUEUES
+                        val index = qb.masterQueues.indexOfFirst { it.id == queueId }
                         val ret = qb.deleteQueue(queueId)
+                        if (ret) {
+                            scope.launch(Dispatchers.IO) {
+                                database.deleteQueue(queueId)
+                            }
+                        }
                         ret
                     }
 
@@ -1592,9 +1614,10 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     Bundle.EMPTY
                 )
             }
+            lastPlayedManager.saveCurrentQueue()
+        } else {
+            lastPlayedManager.saveCurrentQueueMetadataOnly()
         }
-
-        lastPlayedManager.save()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -1613,7 +1636,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         scheduleSendingLyrics(false)
-        lastPlayedManager.save()
+        lastPlayedManager.saveCurrentQueue()
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
@@ -1657,7 +1680,30 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.mediaMetadata.durationMs) ?: -1)
         android.util.Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
         if (playRatio >= minPlaybackDur) {
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
+                val scanner = FFmpegScanner(this@GramophonePlaybackService)
+
+                var f: File? = null
+                mediaItem.localConfiguration?.uri?.let {
+                    val projection = arrayOf(MediaStore.Audio.Media.DATA)
+                    this@GramophonePlaybackService.contentResolver.query(it, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                            f = File(cursor.getString(columnIndex))
+                        }
+                    }
+                }
+
+                val result = f?.let {
+                    scanner.getAllMetadataFromFile(it)
+                }
+                val mediaItem = mediaItem.buildUpon().setMediaMetadata(
+                    mediaItem.mediaMetadata.buildUpon()
+                        .setExtras(Bundle(mediaItem.mediaMetadata.extras).apply {
+                            putString("chromaprint", result?.second)
+                        })
+                        .build()
+                ).build()
                 database.recordEvent(mediaItem, System.currentTimeMillis(), playbackStats.totalPlayTimeMs)
             }
         }
@@ -1680,14 +1726,14 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.save() }
+            handler.post { lastPlayedManager.saveCurrentQueue() }
         }
     }
 
     override fun onRepeatModeChanged(repeatMode: Int) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.save() }
+            handler.post { lastPlayedManager.saveCurrentQueue() }
         }
     }
 
