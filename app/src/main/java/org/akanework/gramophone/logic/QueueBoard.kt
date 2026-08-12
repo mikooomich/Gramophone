@@ -185,21 +185,6 @@ class QueueBoard(
         shuffleOrder: CircularShuffleOrder.Persistent?,
         ended: Boolean,
     ) {
-        if (QUEUE_DEBUG)
-            Log.d(TAG, "Queue data: $masterQueues")
-        if (QUEUE_DEBUG)
-            Log.d(
-                TAG, "Adding to queue \"$title\". medialist size = ${mediaList.size}. " +
-                        "replace/startIndex = $mediaItemIndex"
-            )
-        if (mediaList.isEmpty()) return //throw IllegalArgumentException("Media list cannot be empty")
-
-        masterQueues.removeAll { it.isOriginal && it.title.trimEnd() == title }
-
-        // (4) add new queue
-        if (QUEUE_DEBUG)
-            Log.d(TAG, "Adding: (4) new queue")
-
         val newQueue = MultiQueueObject(
             id = queueId,
             index = -1,
