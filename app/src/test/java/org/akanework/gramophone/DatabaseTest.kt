@@ -1,11 +1,10 @@
 package org.akanework.gramophone
 
-import android.database.sqlite.SQLiteConstraintException
 import android.os.Bundle
 import androidx.core.net.toUri
 import junit.framework.TestCase.assertEquals
-import org.akanework.gramophone.db.InternalDatabase
-import org.akanework.gramophone.db.MusicDatabase
+import org.akanework.gramophone.db.AppDatabase
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.ui.MainActivity
 import org.junit.After
 import org.junit.Before
@@ -18,8 +17,8 @@ import kotlin.jvm.java
 @RunWith(RobolectricTestRunner::class)
 class DatabaseTest {
 
-    private lateinit var db: MusicDatabase
-    private lateinit var dao: MusicDatabase
+    private lateinit var db: GramophoneDatabase
+    private lateinit var dao: GramophoneDatabase
 
     fun genDb1() {
         db.recordEvent(
@@ -80,7 +79,7 @@ class DatabaseTest {
     fun setup() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).create().start()
         val activity = controller.get()
-        db = InternalDatabase.newUnitTestInstance(activity)
+        db = AppDatabase.newUnitTestInstance(activity)
         dao = db
     }
 
