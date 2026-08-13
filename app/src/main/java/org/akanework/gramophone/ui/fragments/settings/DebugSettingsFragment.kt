@@ -94,11 +94,7 @@ class DebugSettingsActivity : BaseComposeActivity() {
                                         )
                                     }
                                     Text(
-                                        text = LocalDateTime.ofEpochSecond(
-                                            event.event.timestamp,
-                                            0, ZoneOffset.UTC
-                                        )
-                                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                        text = event.event.timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                     )
                                     Text(
                                         text = event.song.uri.toString()

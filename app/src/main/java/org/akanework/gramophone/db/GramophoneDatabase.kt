@@ -20,6 +20,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import org.akanework.gramophone.db.GramophoneDatabase.Companion.MUSIC_DATABASE_VERSION
 import org.akanework.gramophone.db.entities.ChromaprintEntity
@@ -29,6 +31,9 @@ import org.akanework.gramophone.db.entities.QueueEntity
 import org.akanework.gramophone.db.entities.QueueSongMap
 import org.akanework.gramophone.db.entities.SongEntity
 import org.akanework.gramophone.db.entities.SongTagEntity
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 
 class GramophoneDatabase(
@@ -74,6 +79,7 @@ class GramophoneDatabase(
     ]
 )
 
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: DatabaseDao
 
@@ -101,4 +107,15 @@ abstract class AppDatabase : RoomDatabase() {
                     .build()
             )
     }
+}
+
+class Converters {
+    @TypeConverter
+    fun fromTimestamp(value: Long?): LocalDateTime? =
+        if (value != null) LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneOffset.UTC)
+        else null
+
+    @TypeConverter
+    fun dateToTimestamp(date: LocalDateTime?): Long? =
+        date?.atZone(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
 }
