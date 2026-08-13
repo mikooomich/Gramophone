@@ -26,6 +26,7 @@ import org.akanework.gramophone.db.entities.ChromaprintEntity
 import org.akanework.gramophone.db.entities.PlayEventEntity
 import org.akanework.gramophone.db.entities.PlayEventLegacyEntity
 import org.akanework.gramophone.db.entities.SongEntity
+import java.time.LocalDateTime
 
 @Dao
 interface PlayCountDao : SongDao {
@@ -38,7 +39,7 @@ interface PlayCountDao : SongDao {
 
 
     @Transaction
-    fun recordEvent(mediaItem: MediaItem, timestamp: Long, duration: Long) {
+    fun recordEvent(mediaItem: MediaItem, timestamp: LocalDateTime, duration: Long) {
         val s = mediaItem.mediaMetadata
         val chromaprint = s.extras?.getString("chromaprint")
 
