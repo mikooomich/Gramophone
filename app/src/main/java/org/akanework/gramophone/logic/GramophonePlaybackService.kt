@@ -155,6 +155,7 @@ import uk.akane.libphonograph.items.albumId
 import uk.akane.libphonograph.manipulator.PlaylistSerializer.Entry
 import uk.akane.libphonograph.reader.FlowReader
 import java.io.File
+import java.time.LocalDateTime
 import java.util.concurrent.Executor
 import kotlin.random.Random
 
@@ -1704,7 +1705,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                         })
                         .build()
                 ).build()
-                database.recordEvent(mediaItem, System.currentTimeMillis(), playbackStats.totalPlayTimeMs)
+                database.recordEvent(mediaItem, LocalDateTime.now(), playbackStats.totalPlayTimeMs)
             }
         }
     }
