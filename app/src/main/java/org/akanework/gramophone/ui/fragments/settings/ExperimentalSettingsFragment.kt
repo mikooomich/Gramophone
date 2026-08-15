@@ -49,6 +49,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import javax.inject.Inject
 import kotlin.system.exitProcess
 
 class ExperimentalSettingsActivity : BaseSettingsActivity(
@@ -56,7 +57,8 @@ class ExperimentalSettingsActivity : BaseSettingsActivity(
     { ExperimentalSettingsFragment() })
 
 class ExperimentalSettingsFragment : BasePreferenceFragment() {
-
+    @Inject
+    lateinit var database: GramophoneDatabase
     private lateinit var e: Exception
 
     private val backupLauncher = registerForActivityResult(
@@ -64,9 +66,7 @@ class ExperimentalSettingsFragment : BasePreferenceFragment() {
     ) { uri ->
         if (uri != null) {
             runCatching {
-                val context = GramophonePlaybackService.instanceForWidgetAndLyricsOnly
-                val database = context!!.database
-                context.applicationContext.contentResolver.openOutputStream(uri)?.use {
+                requireContext().applicationContext.contentResolver.openOutputStream(uri)?.use {
                     ZipOutputStream(it.buffered()).use { outputStream ->
                         outputStream.setLevel(Deflater.BEST_COMPRESSION)
                         runBlocking(Dispatchers.IO) {
@@ -93,9 +93,7 @@ class ExperimentalSettingsFragment : BasePreferenceFragment() {
         if (uri != null) {
             runCatching {
                 val TAG = "restoreLauncher"
-                val context = GramophonePlaybackService.instanceForWidgetAndLyricsOnly
-                val database = context!!.database
-                context.applicationContext.contentResolver.openInputStream(uri)?.use {
+                requireContext().applicationContext.contentResolver.openInputStream(uri)?.use {
                     ZipInputStream(it).use { inputStream ->
                         var entry = inputStream.nextEntry
                         while (entry != null) {
@@ -109,7 +107,7 @@ class ExperimentalSettingsFragment : BasePreferenceFragment() {
                                     database.close()
 
                                     Log.i(TAG, "Testing new database for compatibility...")
-                                    val destFile = context.getDatabasePath(AppDatabase.TEST_DB_NAME)
+                                    val destFile = requireContext().getDatabasePath(AppDatabase.TEST_DB_NAME)
                                     destFile.parentFile?.apply {
                                         if (!exists()) mkdirs()
                                     }
@@ -118,7 +116,7 @@ class ExperimentalSettingsFragment : BasePreferenceFragment() {
                                     }
 
                                     val status = try {
-                                        val t = AppDatabase.newTestInstance(context, AppDatabase.TEST_DB_NAME)
+                                        val t = AppDatabase.newTestInstance(requireContext(), AppDatabase.TEST_DB_NAME)
                                         t.openHelper.writableDatabase.isDatabaseIntegrityOk
                                         t.close()
                                         true
