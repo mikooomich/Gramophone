@@ -180,7 +180,7 @@ interface PlayCountDao : SongDao {
             .forEach { duplicates ->
                 val duplicates = ArrayList(duplicates)
                 // for all intents and purposes, the song we merge into doesnt matter
-                val index = duplicates.indexOf(duplicates.first { !it.song.mergeable })
+                val index = duplicates.indexOf(duplicates.firstOrNull { !it.song.mergeable })
                 val adopter = if (index == -1) {
                     duplicates.first()
                 } else {
