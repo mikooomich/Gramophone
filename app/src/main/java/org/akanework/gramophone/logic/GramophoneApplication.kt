@@ -27,6 +27,11 @@ import androidx.media3.session.DefaultMediaNotificationProvider
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.map.AndroidUriMapper
+import coil3.request.NullRequestDataException
+import coil3.util.Logger
+import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,6 +58,7 @@ import uk.akane.libphonograph.reader.FlowReader
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
+@HiltAndroidApp
 class GramophoneApplication : Application(), SingletonImageLoader.Factory {
 
     companion object {
