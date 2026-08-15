@@ -178,8 +178,14 @@ interface PlayCountDao : SongDao {
         songs.groupBy { find(it.song.id) }.values
             .filter { it.size > 1 }
             .forEach { duplicates ->
+                val duplicates = ArrayList(duplicates)
                 // for all intents and purposes, the song we merge into doesnt matter
-                val adopter = duplicates.first()
+                val index = duplicates.indexOf(duplicates.first { !it.song.mergeable })
+                val adopter = if (index == -1) {
+                    duplicates.first()
+                } else {
+                    duplicates.removeAt(index)
+                }
                 duplicates.subList(1, duplicates.size).forEach {
                     migrateSongEvents(it.song.id, adopter.song.id)
                     delete(it.song)
