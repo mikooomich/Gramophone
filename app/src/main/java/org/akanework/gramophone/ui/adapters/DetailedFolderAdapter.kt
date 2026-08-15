@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.doOnLayout
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
@@ -344,6 +345,19 @@ class DetailedFolderAdapter(
             })
             it.startAnimation(animation)
         }
+        fragment.requireActivity().onBackPressedDispatcher.addCallback(
+            fragment.viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (!fileNodePath.value.isNullOrEmpty()) {
+                        enter(null)
+                    } else {
+                        isEnabled = false
+                        fragment.requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
     }
 
     override fun getPopupText(view: View, position: Int): CharSequence {
