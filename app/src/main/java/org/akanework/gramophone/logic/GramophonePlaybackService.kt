@@ -101,6 +101,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -157,6 +158,10 @@ import uk.akane.libphonograph.reader.FlowReader
 import java.io.File
 import java.time.LocalDateTime
 import java.util.concurrent.Executor
+import javax.inject.Inject
+import kotlin.collections.emptyList
+import kotlin.collections.map
+import kotlin.collections.plus
 import kotlin.random.Random
 
 
@@ -164,6 +169,7 @@ import kotlin.random.Random
  * [GramophonePlaybackService] is a server service.
  * It's using exoplayer2 as its player backend.
  */
+@AndroidEntryPoint
 class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Listener,
     MediaLibrarySession.Callback, Player.Listener, AnalyticsListener,
      PlaybackStatsListener.Callback, SharedPreferences.OnSharedPreferenceChangeListener {
@@ -251,6 +257,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
     // make prettier later
     private lateinit var playbackStatsListener: PlaybackStatsListener
+    @Inject
     lateinit var database: GramophoneDatabase
     private fun getRepeatCommand() =
         when (controller!!.repeatMode) {
@@ -335,7 +342,6 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         nm = NotificationManagerCompat.from(this)
         prefs = defaultPrefs
         qb = QueueBoard(this)
-        database = AppDatabase.newInstance(this)
         setListener(this)
         setMediaNotificationProvider(
             MeiZuLyricsMediaNotificationProvider(this) { lastSentHighlightedLyric }
@@ -473,7 +479,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         player.exoPlayer.addAnalyticsListener(afFormatTracker)
         player.exoPlayer.addAnalyticsListener(playbackStatsListener)
         player.exoPlayer.setShuffleOrder(CircularShuffleOrder(player, 0, 0, Random.nextLong()))
-        lastPlayedManager = LastPlayedManager(this, player)
+        lastPlayedManager = LastPlayedManager(this, player, database)
         lastPlayedManager.allowSavingState = false
         libraryTreeLoader = LibraryTreeLoader(
             this,

@@ -29,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.lifecycle.lifecycleScope
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.db.PlayEventWithSong
 import org.akanework.gramophone.db.SongWithPlaycount
 import org.akanework.gramophone.logic.GramophonePlaybackService
@@ -39,19 +41,22 @@ import org.akanework.gramophone.ui.GramophoneTheme
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class DebugSettingsActivity : BaseComposeActivity() {
     val history: SnapshotStateList<PlayEventWithSong> = mutableStateListOf()
     val playCounts: SnapshotStateList<SongWithPlaycount> = mutableStateListOf()
-    val db = GramophonePlaybackService.instanceForWidgetAndLyricsOnly!!.database
+    @Inject
+    lateinit var database: GramophoneDatabase
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            history.addAll(db.history())
-            playCounts.addAll(db.dumpSongsWithPlayCount())
+            history.addAll(database.history())
+            playCounts.addAll(database.dumpSongsWithPlayCount())
         }
         setContent {
             GramophoneTheme {
