@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDateTime
 import kotlin.jvm.java
 
 @RunWith(RobolectricTestRunner::class)
@@ -20,20 +21,28 @@ class DatabaseTest {
     private lateinit var db: GramophoneDatabase
     private lateinit var dao: GramophoneDatabase
 
+    val t1 = LocalDateTime.of(2019, 4, 21, 6, 23,0)
+    val t2 = LocalDateTime.of(2019, 4, 21, 6, 23,5)
+    val t3 = LocalDateTime.of(2019, 5, 1, 5, 23,6)
+
+    val t4 = LocalDateTime.of(2020, 3, 15, 13, 23,0)
+    val t5 = LocalDateTime.of(2020, 3, 15, 13, 41,3)
+
+    
     fun genDb1() {
         db.recordEvent(
             mediaItem = DataBaseTestData.m1,
-            timestamp = 1563327152L,
+            timestamp = t1,
             duration = 20 * 1000,
         )
         db.recordEvent(
             mediaItem = DataBaseTestData.m2,
-            timestamp = 1563327152L + 123L,
+            timestamp = t2,
             duration = 21 * 1000,
         )
         db.recordEvent(
             mediaItem = DataBaseTestData.m3,
-            timestamp = 1563327152L + 1234L,
+            timestamp = t3,
             duration = 22 * 1000,
         )
     }
@@ -41,22 +50,22 @@ class DatabaseTest {
     fun genDb2() {
         db.recordEvent(
             mediaItem = DataBaseTestData.m1,
-            timestamp = 1563327152L,
+            timestamp = t1,
             duration = 20 * 1000,
         )
         db.recordEvent(
             mediaItem = DataBaseTestData.m2,
-            timestamp = 1563327152L + 1234L,
+            timestamp = t1,
             duration = 21 * 1000,
         )
         db.recordEvent(
             mediaItem = DataBaseTestData.m2,
-            timestamp = 1563327152L + 12345L,
+            timestamp = t3,
             duration = 21 * 1000,
         )
         db.recordEvent(
             mediaItem = DataBaseTestData.m2,
-            timestamp = 1563327152L + 123456L,
+            timestamp = t3,
             duration = 67 * 1000,
         )
     }
@@ -64,13 +73,13 @@ class DatabaseTest {
     fun genDb3() {
         db.recordEvent(
             mediaItem = DataBaseTestData.m1,
-            timestamp = 1563327152L,
+            timestamp = t1,
             duration = 20 * 1000,
         )
 
         db.recordEvent(
             mediaItem = DataBaseTestData.m3,
-            timestamp = 1563327152L + 1234L,
+            timestamp = t2,
             duration = 22 * 1000,
         )
     }
@@ -103,39 +112,39 @@ class DatabaseTest {
         assertEquals(3, result1.size)
         assertEquals(
             2,
-            result1.find { it.song.title == "one" && it.chromaprints.isEmpty() }!!.playCount
+            result1.find { it.song.title == "one" && it.chromaprints.isEmpty() }!!.playcount
         )
         assertEquals(
             4,
-            result1.find { it.song.title == "two" && it.chromaprints.any { it.chromaprint == "uwu_rawr" } }!!.playCount
+            result1.find { it.song.title == "two" && it.chromaprints.any { it.chromaprint == "uwu_rawr" } }!!.playcount
         )
         assertEquals(
             1,
-            result1.find { it.song.title == "three" && it.chromaprints.any { it.chromaprint == "OH WHAT HAVE I DOOOOOOONE" } }!!.playCount
+            result1.find { it.song.title == "three" && it.chromaprints.any { it.chromaprint == "OH WHAT HAVE I DOOOOOOONE" } }!!.playcount
         )
 
         // existing song should only increment
         db.recordEvent(
             mediaItem = DataBaseTestData.m1,
-            timestamp = 1784251952L,
+            timestamp = t4,
             duration = 20 * 1000,
         )
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(3, result1.find { it.song.title == "one" }!!.playCount)
-        assertEquals(4, result1.find { it.song.title == "two" }!!.playCount)
-        assertEquals(1, result1.find { it.song.title == "three" }!!.playCount)
+        assertEquals(3, result1.find { it.song.title == "one" }!!.playcount)
+        assertEquals(4, result1.find { it.song.title == "two" }!!.playcount)
+        assertEquals(1, result1.find { it.song.title == "three" }!!.playcount)
 
         db.recordEvent(
             mediaItem = DataBaseTestData.m2,
-            timestamp = 1784251952L + 123L,
+            timestamp = t5,
             duration = 21 * 1000,
         )
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(3, result1.find { it.song.title == "one" }!!.playCount)
-        assertEquals(5, result1.find { it.song.title == "two" }!!.playCount)
-        assertEquals(1, result1.find { it.song.title == "three" }!!.playCount)
+        assertEquals(3, result1.find { it.song.title == "one" }!!.playcount)
+        assertEquals(5, result1.find { it.song.title == "two" }!!.playcount)
+        assertEquals(1, result1.find { it.song.title == "three" }!!.playcount)
 
         // adding a new media item should be a new entry
         val m4 = DataBaseTestData.genMediaItem(
@@ -147,15 +156,15 @@ class DatabaseTest {
         )
         db.recordEvent(
             mediaItem = m4,
-            timestamp = 1784251952L + 123L,
+            timestamp = t5,
             duration = 21 * 1000,
         )
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(4, result1.size)
-        assertEquals(3, result1.find { it.song.title == "one" }!!.playCount)
-        assertEquals(5, result1.find { it.song.title == "two" }!!.playCount)
-        assertEquals(1, result1.find { it.song.title == "three" }!!.playCount)
-        assertEquals(1, result1.find { it.song.title == "four" }!!.playCount)
+        assertEquals(3, result1.find { it.song.title == "one" }!!.playcount)
+        assertEquals(5, result1.find { it.song.title == "two" }!!.playcount)
+        assertEquals(1, result1.find { it.song.title == "three" }!!.playcount)
+        assertEquals(1, result1.find { it.song.title == "four" }!!.playcount)
     }
 
     @Test
@@ -177,8 +186,9 @@ class DatabaseTest {
 
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(1, result1.find { it.song.id == s1.id }!!.playCount)
-        assertEquals(56, result1.find { it.song.id == s1.id }!!.playCountLegacy)
+        assertEquals(1, result1.find { it.song.id == s1.id }!!.playcount)
+        assertEquals(56, result1.find { it.song.id == s1.id }!!.playcountLegacy)
+        assertEquals(57, result1.find { it.song.id == s1.id }!!.totalPlaycount)
 
         db.recordEventLegacy(
             mediaItem = DataBaseTestData.m1,
@@ -189,8 +199,9 @@ class DatabaseTest {
 
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(1, result1.find { it.song.id == s1.id }!!.playCount)
-        assertEquals(68, result1.find { it.song.id == s1.id }!!.playCountLegacy)
+        assertEquals(1, result1.find { it.song.id == s1.id }!!.playcount)
+        assertEquals(68, result1.find { it.song.id == s1.id }!!.playcountLegacy)
+        assertEquals(69, result1.find { it.song.id == s1.id }!!.totalPlaycount)
 
         try {
             // failure due to bad month
@@ -217,8 +228,9 @@ class DatabaseTest {
 
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(1, result1.find { it.song.id == s1.id }!!.playCount)
-        assertEquals(68, result1.find { it.song.id == s1.id }!!.playCountLegacy)
+        assertEquals(1, result1.find { it.song.id == s1.id }!!.playcount)
+        assertEquals(68, result1.find { it.song.id == s1.id }!!.playcountLegacy)
+        assertEquals(69, result1.find { it.song.id == s1.id }!!.totalPlaycount)
 
 
         // duplicate entries will replace existing values
@@ -231,8 +243,9 @@ class DatabaseTest {
 
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(1, result1.find { it.song.id == s1.id }!!.playCount)
-        assertEquals(70, result1.find { it.song.id == s1.id }!!.playCountLegacy)
+        assertEquals(1, result1.find { it.song.id == s1.id }!!.playcount)
+        assertEquals(70, result1.find { it.song.id == s1.id }!!.playcountLegacy)
+        assertEquals(71, result1.find { it.song.id == s1.id }!!.totalPlaycount)
     }
 
     /**
@@ -249,7 +262,7 @@ class DatabaseTest {
                 DataBaseTestData.m1.mediaMetadata.buildUpon()
                     .setExtras(Bundle().apply { putString("chromaprint", "uwu_rawr") }).build()
             ).build(),
-            timestamp = 1563327152L + 1L,
+            timestamp = t1,
             duration = 25 * 1000,
         )
 
@@ -257,9 +270,9 @@ class DatabaseTest {
         assertEquals(2, result1.size)
         assertEquals(
             7,
-            result1.find { it.chromaprints.any { it.chromaprint == "uwu_rawr" } }!!.playCount
+            result1.find { it.chromaprints.any { it.chromaprint == "uwu_rawr" } }!!.playcount
         )
-        assertEquals(1, result1.find { it.song.title == "three" }!!.playCount)
+        assertEquals(1, result1.find { it.song.title == "three" }!!.playcount)
     }
 
     /**
@@ -271,14 +284,14 @@ class DatabaseTest {
         genDb3()
         var result1 = db.dumpSongsWithPlayCount()
         assertEquals(3, result1.size)
-        assertEquals(2, result1.find { it.song.title == "one" }!!.playCount)
-        assertEquals(2, result1.find { it.song.title == "three" }!!.playCount)
+        assertEquals(2, result1.find { it.song.title == "one" }!!.playcount)
+        assertEquals(2, result1.find { it.song.title == "three" }!!.playcount)
         db.mergeSongsByChromaprint()
 
         result1 = db.dumpSongsWithPlayCount()
         assertEquals(result1.size, 3)
-        assertEquals(2, result1.find { it.song.title == "one" }!!.playCount)
-        assertEquals(2, result1.find { it.song.title == "three" }!!.playCount)
+        assertEquals(2, result1.find { it.song.title == "one" }!!.playcount)
+        assertEquals(2, result1.find { it.song.title == "three" }!!.playcount)
     }
 
 }
