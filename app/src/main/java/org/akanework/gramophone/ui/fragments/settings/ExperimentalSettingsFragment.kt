@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.media3.common.util.Log
 import androidx.preference.Preference
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,11 +53,13 @@ import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import kotlin.system.exitProcess
 
+@AndroidEntryPoint
 class ExperimentalSettingsActivity : BaseSettingsActivity(
     R.string.settings_experimental_settings,
     { ExperimentalSettingsFragment() })
 
-class ExperimentalSettingsFragment : BasePreferenceFragment() {
+@AndroidEntryPoint
+class ExperimentalSettingsFragment() : BasePreferenceFragment() {
     @Inject
     lateinit var database: GramophoneDatabase
     private lateinit var e: Exception
