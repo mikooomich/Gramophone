@@ -18,6 +18,7 @@ plugins {
     id("com.mikepenz.aboutlibraries.plugin.android")
     id("pt.jcosta.resourceplaceholders")
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -366,6 +367,8 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 //    implementation("androidx.room:room-ktx:${room_version}")
+    implementation("com.google.dagger:hilt-android:2.60.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.60.1")
 
 //    implementation(files("../prebuilt/ffMetadataEx-release.aar"))
     implementation("wah.mikooomich:ffmetadataex")
