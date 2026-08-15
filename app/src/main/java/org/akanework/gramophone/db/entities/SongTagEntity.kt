@@ -24,6 +24,7 @@ import uk.akane.libphonograph.items.artistId
 import uk.akane.libphonograph.items.cdTrackNumber
 import uk.akane.libphonograph.items.modifiedDate
 import androidx.core.net.toUri
+import uk.akane.libphonograph.items.hdArtworkUri
 
 @Immutable
 @Entity(tableName = "tag_cache")
@@ -121,15 +122,15 @@ fun MediaItem.toSongTagEntity(): SongTagEntity {
     val md = mediaMetadata
     return SongTagEntity(
         mediaId = mediaId,
-        uri = localConfiguration?.uri.toString(),
+        uri = localConfiguration?.uri?.toString(),
         path = getFile()?.path,
         mimeType = localConfiguration?.mimeType,
         title = md.title?.toString(),
         artist = md.artist?.toString(),
         albumTitle = md.albumTitle?.toString(),
         albumArtist = md.albumArtist?.toString(),
-        artworkUri = md.artworkUri.toString(),
-        hdArtworkUri = localConfiguration?.uri.toString(),
+        artworkUri = md.artworkUri?.toString(),
+        hdArtworkUri = md.hdArtworkUri?.toString(),
         trackNumber = md.trackNumber,
         discNumber = md.discNumber,
         recordingYear = md.recordingYear,
