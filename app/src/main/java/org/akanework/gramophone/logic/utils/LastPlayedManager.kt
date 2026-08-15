@@ -32,13 +32,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.BuildConfig
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.GramophonePlaybackService
 import org.akanework.gramophone.logic.utils.exoplayer.EndedWorkaroundPlayer
 import java.nio.charset.StandardCharsets
 
 class LastPlayedManager(
     context: Context,
-    private val controller: EndedWorkaroundPlayer
+    private val controller: EndedWorkaroundPlayer,
+    val database: GramophoneDatabase,
 ) {
 
     companion object {
@@ -48,8 +50,6 @@ class LastPlayedManager(
     var allowSavingState = true
     private var job: Job? = null
     private val prefs by lazy { context.getSharedPreferences("LastPlayedManager", 0) }
-
-    val database = GramophonePlaybackService.instanceForWidgetAndLyricsOnly!!.database
 
     private fun dumpPlaylist(): MediaItemsWithStartPosition {
         val items = mutableListOf<MediaItem>()
@@ -153,7 +153,7 @@ class LastPlayedManager(
                 val queues = database.readQueues()
                 val activeQueue = queues.first
                 queues.second.forEach {
-                    GramophonePlaybackService.instanceForWidgetAndLyricsOnly!!.qb.masterQueues.add(it)
+                    controller.queueBoard.masterQueues.add(it)
                 }
                 if (activeQueue == null) {
                     callback(null)

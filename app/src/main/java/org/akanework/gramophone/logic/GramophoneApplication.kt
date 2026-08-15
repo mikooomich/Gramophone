@@ -42,6 +42,7 @@ import coil3.SingletonImageLoader
 import coil3.map.AndroidUriMapper
 import coil3.request.NullRequestDataException
 import coil3.util.Logger
+import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -65,6 +66,7 @@ import java.io.IOException
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
+@HiltAndroidApp
 class GramophoneApplication : Application(), SingletonImageLoader.Factory,
     Thread.UncaughtExceptionHandler, SharedPreferences.OnSharedPreferenceChangeListener {
 
