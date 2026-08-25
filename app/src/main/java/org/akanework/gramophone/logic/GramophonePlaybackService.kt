@@ -126,7 +126,6 @@ import org.akanework.gramophone.logic.utils.AfFormatTracker
 import org.akanework.gramophone.logic.utils.AudioTrackInfo
 import org.akanework.gramophone.logic.utils.BtCodecInfo
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
-import org.akanework.gramophone.logic.utils.FFmpegScanner
 import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.logic.utils.LastPlayedManager
 import org.akanework.gramophone.logic.utils.LrcUtils.LrcParserOptions
@@ -1707,6 +1706,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         val mediaItem =
             eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
 
+        MetadataRetriever.retrieveMetadata(context, mediaItem)
         var minPlaybackDur = 0.05f // TODO: temp
         // ensure within bounds
         if (minPlaybackDur >= 1f) {
@@ -1720,7 +1720,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         android.util.Log.d(TAG, "Playback ratio: $playRatio Min threshold: $minPlaybackDur")
         if (playRatio >= minPlaybackDur) {
             scope.launch(Dispatchers.IO) {
-                val scanner = FFmpegScanner(this@GramophonePlaybackService)
+//                val scanner = FFmpegScanner(this@GramophonePlaybackService)
 
                 var f: File? = null
                 mediaItem.localConfiguration?.uri?.let {
@@ -1732,18 +1732,22 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                         }
                     }
                 }
-
-                val result = f?.let {
-                    scanner.getAllMetadataFromFile(it)
+                playbackStats.
+                mediaItem.mediaMetadata. extras?.keySet()?.toList()?.forEach {
+                    println("wtf " + it)
                 }
-                val mediaItem = mediaItem.buildUpon().setMediaMetadata(
-                    mediaItem.mediaMetadata.buildUpon()
-                        .setExtras(Bundle(mediaItem.mediaMetadata.extras).apply {
-                            putString("chromaprint", result?.second)
-                        })
-                        .build()
-                ).build()
-                database.recordEvent(mediaItem, LocalDateTime.now(), playbackStats.totalPlayTimeMs)
+
+//                val result = f?.let {
+//                    scanner.getAllMetadataFromFile(it)
+//                }
+//                val mediaItem = mediaItem.buildUpon().setMediaMetadata(
+//                    mediaItem.mediaMetadata.buildUpon()
+//                        .setExtras(Bundle(mediaItem.mediaMetadata.extras).apply {
+//                            putString("chromaprint", result?.second)
+//                        })
+//                        .build()
+//                ).build()
+//                database.recordEvent(mediaItem, LocalDateTime.now(), playbackStats.totalPlayTimeMs)
             }
         }
     }
