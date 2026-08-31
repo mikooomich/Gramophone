@@ -1707,7 +1707,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         val mediaItem =
             eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
 
-        var minPlaybackDur = 0.05f // TODO: temp
+        var minPlaybackDur = 0.30f // TODO: temp
         // ensure within bounds
         if (minPlaybackDur >= 1f) {
             minPlaybackDur = 0.99f // Ehhh 99 is good enough to avoid any rounding errors
