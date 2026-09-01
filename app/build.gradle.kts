@@ -370,8 +370,8 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.60.1")
     ksp("com.google.dagger:hilt-android-compiler:2.60.1")
 
-//    implementation(files("../prebuilt/ffMetadataEx-release.aar"))
-    implementation("wah.mikooomich:ffmetadataex")
+    implementation(files("../prebuilt/ffMetadataEx-release.aar"))
+//    implementation("wah.mikooomich:ffmetadataex")
 }
 
 fun String.runCommand(

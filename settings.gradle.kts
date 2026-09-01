@@ -32,11 +32,11 @@ includeBuild(file("media3").toPath().toRealPath().toAbsolutePath().toString()) {
     }
 }
 
-includeBuild("../ffMetadataEx") {
-    dependencySubstitution {
-        substitute(module("wah.mikooomich:ffmetadataex")).using(project(":ffMetadataEx"))
-    }
-}
+//includeBuild("../ffMetadataEx") {
+//    dependencySubstitution {
+//        substitute(module("wah.mikooomich:ffmetadataex")).using(project(":ffMetadataEx"))
+//    }
+//}
 
 include(":misc:audiofxstub")
 include(":misc:audiofxstub2")
