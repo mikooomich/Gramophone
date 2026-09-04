@@ -60,6 +60,10 @@ interface DatabaseDao : PlayCountDao {
     @Query("DELETE FROM queue WHERE id = :id")
     fun deleteQueue(id: Long)
 
+    @Transaction
+    @Query("DELETE FROM queue WHERE id NOT IN (:ids)")
+    fun syncQueues(ids: List<Long>)
+
     @Query("SELECT * from queue ORDER BY `index`")
     fun getAllQueues(): List<QueueEntity>
 
@@ -115,6 +119,7 @@ interface DatabaseDao : PlayCountDao {
 
     @Transaction
     fun updateQueue(mq: MultiQueueObject, isActiveQueue: Boolean) {
+        resetIsActiveQueue()
         upsert(
             QueueEntity(
                 id = mq.id,
@@ -140,6 +145,7 @@ interface DatabaseDao : PlayCountDao {
         if (mq.queue.isEmpty()) {
             return
         }
+        resetIsActiveQueue()
 
         upsert(
             QueueEntity(
@@ -175,8 +181,9 @@ interface DatabaseDao : PlayCountDao {
         }
     }
 
+    //TODO: do we need this sanity check
     @Query("UPDATE queue SET isActiveQueue = 0")
-    fun hax()
+    fun resetIsActiveQueue()
 
 
     // debug helpers

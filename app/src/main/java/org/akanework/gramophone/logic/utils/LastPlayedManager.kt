@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.db.GramophoneDatabase
-import org.akanework.gramophone.logic.GramophonePlaybackService
 import org.akanework.gramophone.logic.utils.exoplayer.EndedWorkaroundPlayer
 import java.nio.charset.StandardCharsets
 
@@ -51,16 +50,6 @@ class LastPlayedManager(
     private var job: Job? = null
     private val prefs by lazy { context.getSharedPreferences("LastPlayedManager", 0) }
 
-    private fun dumpPlaylist(): MediaItemsWithStartPosition {
-        val items = mutableListOf<MediaItem>()
-        for (i in 0 until controller.mediaItemCount) {
-            items.add(controller.getMediaItemAt(i))
-        }
-        return MediaItemsWithStartPosition(
-            items, controller.currentMediaItemIndex, controller.currentPosition
-        )
-    }
-
     fun eraseShuffleOrder() {
         prefs.edit(commit = true) {
             putString("shuffle_persist", null)
@@ -72,6 +61,7 @@ class LastPlayedManager(
     }
 
     fun saveAll() = save(SaveMode.ALL)
+    fun saveAllQueueMetadata() = save(SaveMode.ALL_QUEUE_METADATA)
     fun saveCurrentQueue() = save(SaveMode.CURRENT_QUEUE)
     fun saveCurrentQueueMetadataOnly() = save(SaveMode.CURRENT_QUEUE_METADATA)
 
@@ -84,9 +74,8 @@ class LastPlayedManager(
             Log.d(TAG, "dumping playlist... Mode=$mode")
         }
 
-        val data = dumpPlaylist()
         val playbackParameters = controller.playbackParameters
-        val activeQueue = controller.getActiveQueue()?.copy(queue = data.mediaItems) ?: return
+        val activeQueue = controller.getActiveQueue().copy()
         job?.cancel()
         job = CoroutineScope(Dispatchers.Default).launch {
             if (BuildConfig.DEBUG) {
@@ -98,25 +87,26 @@ class LastPlayedManager(
             }
 
             when(mode) {
-                SaveMode.ALL -> {
-                    val queues = controller.queueBoard.getInactiveQueues() + activeQueue
-                    database.hax()
-                    queues.forEach {
-                        database.saveQueue(it, it == activeQueue)
-                    }
-                }
                 SaveMode.CURRENT_QUEUE -> {
                     database.saveQueue(activeQueue, true)
                 }
+                /*
                 SaveMode.CURRENT_QUEUE_METADATA -> {
                     database.updateQueue(activeQueue, true)
                 }
-                SaveMode.ALL_QUEUE_METADATA -> {
+                 */
+                SaveMode.CURRENT_QUEUE_METADATA, SaveMode.ALL_QUEUE_METADATA -> {
                     val queues = controller.queueBoard.getInactiveQueues() + activeQueue
                     database.updateAllQueues(
                         queues,
                         activeQueue.index
                     )
+                }
+                else -> {
+                    val queues = controller.queueBoard.getInactiveQueues() + activeQueue
+                    queues.forEach {
+                        database.saveQueue(it, it == activeQueue)
+                    }
                 }
             }
             prefs.edit {
@@ -129,8 +119,8 @@ class LastPlayedManager(
 
     class RestoredPlaylist(
         val items: MediaItemsWithStartPosition, val title: String,
-        val seed: CircularShuffleOrder.Persistent?, val isEnded: Boolean, val repeatMode: Int,
-        val shuffle: Boolean, val playbackParameters: PlaybackParameters
+        val seed: CircularShuffleOrder.Persistent?, val isPinned: Boolean, val isEnded: Boolean,
+        val repeatMode: Int, val shuffle: Boolean, val playbackParameters: PlaybackParameters
     )
 
     suspend fun restore(callback: suspend (RestoredPlaylist?) -> Unit) {
@@ -162,6 +152,7 @@ class LastPlayedManager(
 
                 val repeatMode = activeQueue.repeatMode
                 val shuffleModeEnabled = activeQueue.shuffleModeEnabled
+                val pinned = activeQueue.expiry == null
                 val ended = activeQueue.ended
                 val playbackParameters = PlaybackParameters(
                     prefs.getFloat("speed", 1f),
@@ -184,7 +175,7 @@ class LastPlayedManager(
                     throw IllegalStateException("Bad shuffle order size ${seed.data.size} for" +
                             " ${data.mediaItems.size} items")
                 callback(RestoredPlaylist(data, activeQueue.title,
-                    seed, ended, repeatMode, shuffleModeEnabled, playbackParameters))
+                    seed, pinned, ended, repeatMode, shuffleModeEnabled, playbackParameters))
                 return@withContext
             } catch (e: Exception) {
                 try {
