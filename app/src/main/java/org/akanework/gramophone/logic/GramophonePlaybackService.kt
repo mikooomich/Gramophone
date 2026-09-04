@@ -636,7 +636,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                                     items.items.startIndex,
                                     items.items.startPositionMs,
                                     items.title,
-                                    false, /* TODO(MQ) */
+                                    items.isPinned,
                                     true, /* TODO(MQ) */
                                     items.isEnded,
                                     items.repeatMode,
@@ -650,7 +650,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                                     C.INDEX_UNSET,
                                     C.TIME_UNSET,
                                     items.title,
-                                    false, /* TODO(MQ) */
+                                    items.isPinned,
                                     true, /* TODO(MQ) */
                                     items.isEnded,
                                     items.repeatMode,
@@ -1178,6 +1178,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     val queueId = customCommand.customExtras.getLong("queueId")
                     val status = if (queueId == plr.currentQueueId) {
                         plr.currentIsPinned = true
+                        lastPlayedManager.saveCurrentQueueMetadataOnly()
                         true
                     } else {
                         val index = qb.masterQueues.indexOfFirst { it.id == queueId }
@@ -1201,6 +1202,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     val queueId = customCommand.customExtras.getLong("queueId")
                     val status = if (queueId == plr.currentQueueId) {
                         endedWorkaroundPlayer!!.currentIsPinned = false
+                        lastPlayedManager.saveCurrentQueueMetadataOnly()
                         true
                     } else {
                         val index = qb.masterQueues.indexOfFirst { it.id == queueId }
@@ -1229,7 +1231,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                         try {
                             val nextQueueIndex = qb.getInactiveQueues().size - 1
                             if (nextQueueIndex < 0) {
-                                val currentQueueId = endedWorkaroundPlayer!!.currentQueueId
+                                val currentQueueId = plr.currentQueueId
                                 plr.clearMediaItems()
                                 refreshLevel = CLIENT_QB_REFRESH_CLEAR
                                 scope.launch(Dispatchers.IO) {
@@ -2038,5 +2040,10 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         val expanded = libraryTreeLoader.addMediaItems(mediaItems).await()
         val mapped = mapMediaItemsForFavorites(expanded.mediaItems)
         MediaSession.MediaItemsWithStartPosition(mapped, expanded.startIndex ?: startIndex, startPositionMs)
+    }
+
+    fun saveQueuesTemp() {
+        //TODO: temp
+        lastPlayedManager.saveAllQueueMetadata()
     }
 }
