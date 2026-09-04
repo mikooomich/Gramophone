@@ -1056,11 +1056,11 @@ class MqState(
     }
 
     fun removeQueue(queueId: Long? = activeQueue?.second?.id) {
-        if (queueId == null) return
         if (!Flags.MQ_PREVIEW) {
             instance.clearMediaItems()
             return
         }
+        if (queueId == null) return
 
         instance.deleteQueue(queueId)
 

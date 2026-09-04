@@ -124,6 +124,7 @@ class QueueBoard(
      */
     fun pinQueue(index: Int): Boolean {
         masterQueues[index].expiry = null
+        player.saveQueuesTemp()
         return true
     }
 
@@ -137,6 +138,7 @@ class QueueBoard(
     fun unpinQueue(index: Int): Boolean {
         if (masterQueues.isEmpty()) return false
         masterQueues[index].expiry = System.currentTimeMillis() + QUEUE_EXPIRY_MS
+        player.saveQueuesTemp()
         return true
     }
 
@@ -151,12 +153,10 @@ class QueueBoard(
         masterQueues.clear()
         masterQueues.addAll(newQueueList)
 
-        /*
         val activeQueue = player.endedWorkaroundPlayer!!.getActiveQueue()
         player.lifecycleScope.launch(Dispatchers.IO) {
             player.database.updateMqs(masterQueues.toList(), activeQueue)
         }
-         */
     }
 
 
