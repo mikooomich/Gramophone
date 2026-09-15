@@ -104,6 +104,10 @@ import org.akanework.gramophone.ui.MainActivity
 import org.akanework.gramophone.ui.components.Chronometer
 import org.akanework.gramophone.ui.components.PlaylistQueueSheet
 import org.akanework.gramophone.ui.components.compose.QueueDropdownMenu
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.Period
+import java.time.format.DateTimeFormatter
 import java.util.LinkedList
 
 @Composable
@@ -227,11 +231,9 @@ fun MqListItem(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    // TODO: why need div by 10 here
-                                    val remainingTimeMs =
-                                        (expiry!! - System.currentTimeMillis()) / 10
+                                    val remainingTime = Duration.between(expiry!!.toLocalDate(), LocalDateTime.now())
                                     Icon(
-                                        painter = painterResource(if (!isActiveQueue && remainingTimeMs < 1800000) R.drawable.ic_warning else R.drawable.ic_keep),
+                                        painter = painterResource(if (!isActiveQueue && remainingTime < 1800000) R.drawable.ic_warning else R.drawable.ic_keep),
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(12.dp)
@@ -240,9 +242,7 @@ fun MqListItem(
                                             }),
                                     )
                                     Text(
-                                        text = if (isActiveQueue) "∞" else makeTimeString(
-                                            remainingTimeMs
-                                        ),
+                                        text = if (isActiveQueue) "∞" else makeTimeString(remainingTime),
                                         color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
                                         fontSize = 10.sp,
                                         maxLines = 1,
@@ -804,20 +804,8 @@ fun QueueRoot(
 
 
 // TODO: clean up later
-fun makeTimeString(duration: Long?): String {
-    if (duration == null || duration < 0) return ""
-    var sec = duration / 1000
-    val day = sec / 86400
-    sec %= 86400
-    val hour = sec / 3600
-    sec %= 3600
-    val minute = sec / 60
-    sec %= 60
-    return when {
-        day > 0 -> "%d:%02d:%02d:%02d".format(day, hour, minute, sec)
-        hour > 0 -> "%d:%02d:%02d".format(hour, minute, sec)
-        else -> "%d:%02d".format(minute, sec)
-    }
+fun makeTimeString(localDateTime: LocalDateTime): String {
+    return localDateTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 }
 
 @Composable
