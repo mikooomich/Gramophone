@@ -44,6 +44,7 @@ import org.akanework.gramophone.logic.gramophoneApplication
 import org.akanework.gramophone.logic.requireMediaStoreId
 import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.MyRecyclerView
+import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.ui.MediaControllerViewModel
 import org.akanework.gramophone.ui.SongPickerActivity
 import org.akanework.gramophone.ui.components.NowPlayingDrawable
@@ -251,10 +252,15 @@ class SongAdapter(
                 }
 
                 R.id.add_to_queue -> {
-                    val mediaController = mainActivity.getPlayer()
-                    mediaController?.addMediaItem(
-                        item,
-                    )
+                    if (Flags.MQ_PREVIEW && prefs.getBooleanStrict("mq_preview", false)) {
+                        mainActivity.addToQueueDialog(item)
+                    } else {
+                        val mediaController = mainActivity.getPlayer()
+                        mediaController?.addMediaItem(
+                            item,
+                        )
+                    }
+
                     true
                 }
 

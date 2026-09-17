@@ -18,7 +18,6 @@
 package org.akanework.gramophone.ui
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.NotificationManager
 import android.app.SearchManager
 import android.app.assist.AssistContent
@@ -26,6 +25,8 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
@@ -40,6 +41,7 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.view.Choreographer
 import android.view.SearchEvent
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -48,13 +50,18 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.app.DialogCompat
 import androidx.core.content.IntentCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
@@ -66,31 +73,37 @@ import androidx.media3.common.util.Log
 import androidx.media3.session.DefaultMediaNotificationProvider
 import coil3.imageLoader
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.R
+import org.akanework.gramophone.logic.MultiQueueObject
 import org.akanework.gramophone.logic.dpToPx
 import org.akanework.gramophone.logic.enableEdgeToEdgeProperly
 import org.akanework.gramophone.logic.getBooleanStrict
+import org.akanework.gramophone.logic.getInactiveQueues
+import org.akanework.gramophone.logic.getQueueForUi
 import org.akanework.gramophone.logic.gramophoneApplication
 import org.akanework.gramophone.logic.hasAudioPermission
 import org.akanework.gramophone.logic.hasScopedStorageV2
 import org.akanework.gramophone.logic.hasScopedStorageWithMediaTypes
 import org.akanework.gramophone.logic.needsMissingOnDestroyCallWorkarounds
 import org.akanework.gramophone.logic.postAtFrontOfQueueAsync
+import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.BaseActivity
 import org.akanework.gramophone.ui.adapters.PlaylistAdapter
 import org.akanework.gramophone.ui.components.PlayerBottomSheet
@@ -356,6 +369,107 @@ class MainActivity : BaseActivity() {
                 )
             } else {
                 doAddToPlaylist(RESULT_OK, data)
+            }
+        }
+    }
+
+    fun addToQueueDialog(item: MediaItem) = addToPlaylistDialog(listOf(item))
+
+    @OptIn(FlowPreview::class, InternalCoroutinesApi::class)
+    fun addToQueueDialog(items: List<MediaItem>) {
+        if (items.isEmpty()) return
+        lifecycleScope.launch(Dispatchers.Main) {
+            val plr = getPlayer()!!
+            val activeQueue = plr.getQueueForUi()!!.second
+            val inactiveQueues: List<MultiQueueObject> = plr.getInactiveQueues()
+            val allQueues = inactiveQueues + activeQueue
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(R.string.add_to_queue)
+                .setIcon(androidx.media3.session.R.drawable.media3_icon_queue_next)
+                .setItems(((inactiveQueues + activeQueue).map { mq ->
+                    if (allQueues.any { it.id != mq.id && it.title == mq.title}) {
+                        "${mq.title} (${mq.id})"
+                    } else {
+                        mq.title
+                    }
+                } + getString(R.string.create_queue)).toTypedArray())
+                { _, item ->
+                    if (allQueues.size == item) {
+                        queueNameDialog(this@MainActivity,
+                            R.string.create_queue, "", allQueues) { name ->
+                            plr.setMediaItemsSeamlessly(items, 0, name)
+                        }
+                        return@setItems
+                    }
+                    val pl = allQueues[item]
+                    plr.setMediaItemsSeamlessly(pl.queue + items, pl.startIndex, pl.title)
+                }
+                .setNegativeButton(android.R.string.cancel) { _, _ -> }
+                .show()
+        }
+    }
+
+    fun queueNameDialog(
+        context: Context,
+        title: Int,
+        initialValue: String,
+        queues: List<MultiQueueObject>,
+        then: (String) -> Unit
+    ) {
+        val d = MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setView(R.layout.dialog_new_playlist)
+            .setPositiveButton(android.R.string.ok) { d, _ ->
+                val et = DialogCompat.requireViewById(
+                    d as AlertDialog,
+                    R.id.editText
+                ) as TextInputEditText
+                val name = et.editableText.toString()
+                then(name)
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ -> }
+            .show()
+        val et = DialogCompat.requireViewById(d, R.id.editText) as TextInputEditText
+        val b = d.getButton(DialogInterface.BUTTON_POSITIVE)
+        val inL = DialogCompat.requireViewById(d, R.id.inputLayout) as TextInputLayout
+        et.editableText.append(initialValue)
+        b.isEnabled = !initialValue.isBlank()
+        inL.error = null
+        d.window!!.decorView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        // TODO: why on earth is this even needed? "Small Phone" emu otherwise cant type
+        d.window!!.setLayout(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            d.window!!.decorView.measuredHeight
+        )
+        var job: Job? = null
+        et.addTextChangedListener(afterTextChanged = {
+            val tmp = et.editableText.toString()
+            job?.cancel()
+            inL.error = null
+            b.isEnabled = false
+            lateinit var myJob: Job
+            myJob = CoroutineScope(Dispatchers.Default).launch {
+                val exists = queues.any { it.title == tmp }
+                withContext(Dispatchers.Main) {
+                    if (job == myJob) {
+                        job = null
+                        if (exists) {
+                            inL.error = context.getString(R.string.another_with_name)
+                        } else {
+                            inL.error = null
+                        }
+                        b.isEnabled = !exists
+                    }
+                }
+            }
+            job = myJob
+        })
+        et.requestFocus()
+        et.post {
+            if (ViewCompat.getRootWindowInsets(d.window!!.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == false
+            ) {
+                WindowInsetsControllerCompat(d.window!!, et).show(WindowInsetsCompat.Type.ime())
             }
         }
     }
