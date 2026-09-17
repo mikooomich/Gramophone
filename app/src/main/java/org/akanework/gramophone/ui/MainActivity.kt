@@ -18,7 +18,6 @@
 package org.akanework.gramophone.ui
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.NotificationManager
 import android.app.SearchManager
 import android.app.assist.AssistContent
@@ -48,7 +47,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.IntentCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -77,20 +75,23 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.R
+import org.akanework.gramophone.logic.MultiQueueObject
 import org.akanework.gramophone.logic.dpToPx
 import org.akanework.gramophone.logic.enableEdgeToEdgeProperly
 import org.akanework.gramophone.logic.getBooleanStrict
+import org.akanework.gramophone.logic.getInactiveQueues
+import org.akanework.gramophone.logic.getQueueForUi
 import org.akanework.gramophone.logic.gramophoneApplication
 import org.akanework.gramophone.logic.hasAudioPermission
 import org.akanework.gramophone.logic.hasScopedStorageV2
 import org.akanework.gramophone.logic.hasScopedStorageWithMediaTypes
 import org.akanework.gramophone.logic.needsMissingOnDestroyCallWorkarounds
 import org.akanework.gramophone.logic.postAtFrontOfQueueAsync
+import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.BaseActivity
 import org.akanework.gramophone.ui.adapters.PlaylistAdapter
 import org.akanework.gramophone.ui.components.PlayerBottomSheet
@@ -357,6 +358,50 @@ class MainActivity : BaseActivity() {
             } else {
                 doAddToPlaylist(RESULT_OK, data)
             }
+        }
+    }
+
+    fun addToQueueDialog(item: MediaItem) = addToPlaylistDialog(listOf(item))
+
+    @OptIn(FlowPreview::class, InternalCoroutinesApi::class)
+    fun addToQueueDialog(items: List<MediaItem>) {
+        if (items.isEmpty()) {
+            Toast.makeText(
+                this@MainActivity,
+                getString(R.string.edit_playlist_failed, "Empty list"),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        lifecycleScope.launch(Dispatchers.Main) {
+            val plr = getPlayer()!!
+            val activeQueue = plr.getQueueForUi()!!.second
+            val inactiveQueues: List<MultiQueueObject> = plr.getInactiveQueues()
+            val allQueues = inactiveQueues + activeQueue
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(R.string.add_to_playlist)
+                .setIcon(R.drawable.ic_playlist_play)
+                .setItems(((inactiveQueues + activeQueue).map { mq ->
+                    if (allQueues.any { it.id != mq.id && it.title == mq.title}) {
+                        "${mq.title} (${mq.id})"
+                    } else {
+                        mq.title
+                    }
+                } + getString(R.string.create_playlist)).toTypedArray())
+                { _, item ->
+                    if (allQueues.size == item) {
+                        PlaylistAdapter.playlistNameDialog(this@MainActivity,
+                            R.string.create_playlist, "",
+                            { ItemManipulator.getDefaultPlaylistFile(it) }) { name ->
+                            plr.setMediaItemsSeamlessly(items, 0, name.name)
+                        }
+                        return@setItems
+                    }
+                    val pl = allQueues[item]
+                    plr.setMediaItemsSeamlessly(pl.queue + items, pl.startIndex, pl.title)
+                }
+                .setNegativeButton(android.R.string.cancel) { _, _ -> }
+                .show()
         }
     }
 

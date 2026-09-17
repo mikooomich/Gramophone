@@ -1122,9 +1122,8 @@ class MqState(
 
     fun addToQueue(queueId: Long) {
         instance.getQueueForUi(queueId)?.let { mq ->
-            instance.addMediaItems(
-                mq.first.zip(mq.second.queue).sortedBy { it.first }.map { it.second },
-            )
+            activity.addToQueueDialog(mq.first.zip(mq.second.queue).sortedBy { it.first }
+                .map { it.second })
         }
         if (!isDetached()) {
             updateList()
