@@ -105,6 +105,10 @@ import org.akanework.gramophone.ui.MainActivity
 import org.akanework.gramophone.ui.components.Chronometer
 import org.akanework.gramophone.ui.components.PlaylistQueueSheet
 import org.akanework.gramophone.ui.components.compose.QueueDropdownMenu
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.Period
+import java.time.format.DateTimeFormatter
 import java.util.LinkedList
 
 @Composable
@@ -228,9 +232,9 @@ fun MqListItem(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    val remainingTimeMs = (expiry!! - System.currentTimeMillis())
+                                    val remainingTime = Duration.between(LocalDateTime.now(), expiry!!)
                                     Icon(
-                                        painter = painterResource(if (!isActiveQueue && remainingTimeMs < 1800000) R.drawable.ic_warning else R.drawable.ic_keep),
+                                        painter = painterResource(if (!isActiveQueue && remainingTime < Duration.ofMinutes(30L)) R.drawable.ic_warning else R.drawable.ic_keep),
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(12.dp)
@@ -239,9 +243,7 @@ fun MqListItem(
                                             }),
                                     )
                                     Text(
-                                        text = if (isActiveQueue) "∞" else convertDurationToTimeStamp(
-                                            remainingTimeMs
-                                        ),
+                                        text = if (isActiveQueue) "∞" else convertDurationToTimeStamp(remainingTime.toMillis()),
                                         color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
                                         fontSize = 10.sp,
                                         maxLines = 1,

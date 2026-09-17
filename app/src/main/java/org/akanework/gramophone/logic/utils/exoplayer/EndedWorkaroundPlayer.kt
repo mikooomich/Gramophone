@@ -42,6 +42,7 @@ import org.json.JSONObject
 import org.akanework.gramophone.logic.getBooleanStrict
 import uk.akane.libphonograph.items.EXTRA_HD_ARTWORK_URI
 import uk.akane.libphonograph.items.hdArtworkUri
+import java.time.LocalDateTime
 import java.util.Objects
 
 
@@ -440,7 +441,7 @@ class EndedWorkaroundPlayer(
             id = currentQueueId?: -1, // TODO: fix crash but should return nullable MultiQueueObject
             index = 0,
             title = currentTitle ?: context.getString(R.string.unknown_playlist),
-            expiry = if (currentIsPinned) null else 0L,
+            expiry = if (currentIsPinned) null else LocalDateTime.now(),
             queue = ArrayList<MediaItem>(exoPlayer.mediaItemCount).apply {
                 for (i in 0..<exoPlayer.mediaItemCount) {
                     add(exoPlayer.getMediaItemAt(i))

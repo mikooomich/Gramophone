@@ -36,8 +36,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
 import org.akanework.gramophone.logic.utils.MediaItemList
+import java.time.LocalDateTime
 
-private const val QUEUE_EXPIRY_MS = 10 * 3600000 // 10 hrs
+private const val QUEUE_EXPIRY_HR = 10L // 10 hrs
 
 /**
  * Multiple queues manager for inactive queues.
@@ -132,7 +133,7 @@ class QueueBoard(
      */
     fun unpinQueue(index: Int): Boolean {
         if (masterQueues.isEmpty()) return false
-        masterQueues[index].expiry = System.currentTimeMillis() + QUEUE_EXPIRY_MS
+        masterQueues[index].expiry = LocalDateTime.now().plusHours(QUEUE_EXPIRY_HR)
         return true
     }
 
@@ -140,9 +141,9 @@ class QueueBoard(
      * Remove expired queues from the QueueBoard
      */
     fun trimAndSaveQB() {
-        val currentTimeMillis = System.currentTimeMillis()
+        val currentTime = LocalDateTime.now()
         val newQueueList = masterQueues.filter {
-            it.expiry == null || it.expiry!! > currentTimeMillis
+            it.expiry == null || it.expiry!! > currentTime
         }
         masterQueues.clear()
         masterQueues.addAll(newQueueList)
@@ -204,7 +205,7 @@ class QueueBoard(
             id = queueId,
             index = -1,
             title = title,
-            expiry = if (!shouldPin) System.currentTimeMillis() + QUEUE_EXPIRY_MS else null,
+            expiry = if (!shouldPin) LocalDateTime.now().plusHours(QUEUE_EXPIRY_HR) else null,
             queue = ArrayList(mediaList),
             startIndex = mediaItemIndex,
             startPositionMs = startPositionMs ?: C.TIME_UNSET,
@@ -368,7 +369,7 @@ class QueueBoard(
     fun age() {
         masterQueues.forEach {
             if (it.expiry != null) {
-                it.expiry = it.expiry!! + 2L * 36000000L
+                it.expiry = it.expiry!!.plusHours(2L)
             }
         }
     }
@@ -410,7 +411,7 @@ data class MultiQueueObject(
      * it becomes inactive. If said queue is unpinned, then it will renew its expiry time when it
      * becomes inactive.
      */
-    var expiry: Long?,
+    var expiry: LocalDateTime?,
     /**
      * The order of songs are dynamic. This should not be accessed from outside QueueBoard.
      */
@@ -480,7 +481,7 @@ data class MultiQueueObject(
             putLong("id", id)
             putInt("index", index)
             putString("title", title)
-            putString("expiry", expiry.toString())
+            putString("expiry", expiry?.toString())
 
             putBinder("queue", binder)
 
@@ -509,7 +510,7 @@ data class MultiQueueObject(
                 id = bundle.getLong("id"),
                 index = bundle.getInt("index"),
                 title = bundle.getString("title") ?: "",
-                expiry = bundle.getString("expiry")?.toLongOrNull(),
+                expiry = bundle.getString("expiry")?.let { LocalDateTime.parse(it) },
                 queue = queue,
 
                 startIndex = bundle.getInt("startIndex", C.INDEX_UNSET),
