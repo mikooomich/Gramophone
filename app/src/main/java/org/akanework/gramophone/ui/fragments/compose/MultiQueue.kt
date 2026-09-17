@@ -98,6 +98,7 @@ import org.akanework.gramophone.logic.playOrPause
 import org.akanework.gramophone.logic.renameQueue
 import org.akanework.gramophone.logic.supportsWideScreen
 import org.akanework.gramophone.logic.unpinQueue
+import org.akanework.gramophone.logic.utils.CalculationUtils.convertDurationToTimeStamp
 import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.logic.utils.convertDurationToTimeStamp
 import org.akanework.gramophone.ui.MainActivity
@@ -227,9 +228,7 @@ fun MqListItem(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    // TODO: why need div by 10 here
-                                    val remainingTimeMs =
-                                        (expiry!! - System.currentTimeMillis()) / 10
+                                    val remainingTimeMs = (expiry!! - System.currentTimeMillis())
                                     Icon(
                                         painter = painterResource(if (!isActiveQueue && remainingTimeMs < 1800000) R.drawable.ic_warning else R.drawable.ic_keep),
                                         contentDescription = null,
@@ -240,7 +239,7 @@ fun MqListItem(
                                             }),
                                     )
                                     Text(
-                                        text = if (isActiveQueue) "∞" else makeTimeString(
+                                        text = if (isActiveQueue) "∞" else convertDurationToTimeStamp(
                                             remainingTimeMs
                                         ),
                                         color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
@@ -432,7 +431,7 @@ fun QueueInfo(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = makeTimeString(durationMs),
+                text = convertDurationToTimeStamp(durationMs),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -802,53 +801,6 @@ fun QueueRoot(
     }
 }
 
-
-// TODO: clean up later
-fun makeTimeString(duration: Long?): String {
-    if (duration == null || duration < 0) return ""
-    var sec = duration / 1000
-    val day = sec / 86400
-    sec %= 86400
-    val hour = sec / 3600
-    sec %= 3600
-    val minute = sec / 60
-    sec %= 60
-    return when {
-        day > 0 -> "%d:%02d:%02d:%02d".format(day, hour, minute, sec)
-        hour > 0 -> "%d:%02d:%02d".format(hour, minute, sec)
-        else -> "%d:%02d".format(minute, sec)
-    }
-}
-
-@Composable
-fun EmptyPlaceholder(
-    icon: ImageVector,
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .fillMaxSize()
-            .padding(12.dp)
-    ) {
-        Image(
-            icon,
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground),
-            modifier = Modifier.size(64.dp)
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
-}
-
-// end clean up later
 
 /**
  * State object for Multiqueue.

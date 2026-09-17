@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 import org.akanework.gramophone.logic.utils.CircularShuffleOrder
 import org.akanework.gramophone.logic.utils.MediaItemList
 
-private const val QUEUE_EXPIRY_MS = 10 * 36000000 // 10 hrs
+private const val QUEUE_EXPIRY_MS = 10 * 3600000 // 10 hrs
 
 /**
  * Multiple queues manager for inactive queues.
