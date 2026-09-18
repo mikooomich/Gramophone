@@ -96,11 +96,8 @@ class LastPlayedManager(
                 }
                  */
                 SaveMode.CURRENT_QUEUE_METADATA, SaveMode.ALL_QUEUE_METADATA -> {
-                    val queues = controller.queueBoard.getInactiveQueues() + activeQueue
-                    database.updateAllQueues(
-                        queues,
-                        activeQueue.index
-                    )
+                    val queues = controller.queueBoard.getInactiveQueues()
+                    database.updateAllQueues(queues, activeQueue)
                 }
                 else -> {
                     val queues = controller.queueBoard.getInactiveQueues() + activeQueue

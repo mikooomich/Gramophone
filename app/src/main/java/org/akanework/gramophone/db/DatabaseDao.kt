@@ -36,12 +36,15 @@ interface DatabaseDao : PlayCountDao {
     fun upsert(queueEntity: QueueEntity)
 
     @Transaction
-    fun updateAllQueues(mqs: List<MultiQueueObject>, activeQueueIndex: Int) {
+    fun updateAllQueues(mqs: List<MultiQueueObject>, activeQueue: MultiQueueObject?) {
         val mqs = mqs.toList().reversed() // please no more ConcurrentModificationException I beg you
         mqs.forEachIndexed { index, q -> q.index = index }
 //        nukeAliens(mqs.map { it.id })
-        mqs.forEachIndexed { index, q ->
-            updateQueue(q, index == q.index)
+        mqs.forEachIndexed { _, q ->
+            updateQueue(q, false)
+        }
+        activeQueue?.let {
+            updateQueue(it, true)
         }
     }
 
@@ -71,7 +74,7 @@ interface DatabaseDao : PlayCountDao {
     fun nukeAliens(ids: List<Long>)
 
     @Transaction
-    @Query("SELECT tag_cache.* FROM queue_song_map JOIN tag_cache ON queue_song_map.songId = tag_cache.mediaId WHERE queueId = :queueId ORDER BY `index`")
+    @Query("SELECT tag_cache.* FROM queue_song_map JOIN tag_cache ON queue_song_map.songId = tag_cache.mediaId WHERE queueId = :queueId ORDER BY `index` DESC")
     fun getQueueSongs(queueId: Long): List<SongTagEntity>
 
     @Transaction
