@@ -37,7 +37,7 @@ interface DatabaseDao : PlayCountDao {
 
     @Transaction
     fun updateAllQueues(mqs: List<MultiQueueObject>, activeQueueIndex: Int) {
-        val mqs = mqs.toList() // please no more ConcurrentModificationException I beg you
+        val mqs = mqs.toList().reversed() // please no more ConcurrentModificationException I beg you
         mqs.forEachIndexed { index, q -> q.index = index }
 //        nukeAliens(mqs.map { it.id })
         mqs.forEachIndexed { index, q ->

@@ -369,8 +369,8 @@ class QueueBoard(
  */
 private fun MutableList<MultiQueueObject>.bubbleUp(mq: MultiQueueObject) {
     remove(mq)
-    add(mq)
-    forEachIndexed { index, mq ->
+    add(0, mq)
+    reversed().forEachIndexed { index, mq ->
         mq.index = index
     }
 }
