@@ -1305,4 +1305,6 @@ supporting local search. This string is displayed in the search bar when using G
     <string name="loading_playlists">Loading playlists...</string>
     <!-- Option to enable reordering mode for items in a list -->
     <string name="edit_mode">Enter edit mode</string>
+    <!-- Add to queue selection dialog after user pressed "Add to queue" on a song or list of songs -->
+    <string name="create_queue">Create Queue…</string>
 </resources>

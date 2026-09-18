@@ -365,33 +365,26 @@ class MainActivity : BaseActivity() {
 
     @OptIn(FlowPreview::class, InternalCoroutinesApi::class)
     fun addToQueueDialog(items: List<MediaItem>) {
-        if (items.isEmpty()) {
-            Toast.makeText(
-                this@MainActivity,
-                getString(R.string.edit_playlist_failed, "Empty list"),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
+        if (items.isEmpty()) return
         lifecycleScope.launch(Dispatchers.Main) {
             val plr = getPlayer()!!
             val activeQueue = plr.getQueueForUi()!!.second
             val inactiveQueues: List<MultiQueueObject> = plr.getInactiveQueues()
             val allQueues = inactiveQueues + activeQueue
             MaterialAlertDialogBuilder(this@MainActivity)
-                .setTitle(R.string.add_to_playlist)
-                .setIcon(R.drawable.ic_playlist_play)
+                .setTitle(R.string.add_to_queue)
+                .setIcon(androidx.media3.session.R.drawable.media3_icon_queue_next)
                 .setItems(((inactiveQueues + activeQueue).map { mq ->
                     if (allQueues.any { it.id != mq.id && it.title == mq.title}) {
                         "${mq.title} (${mq.id})"
                     } else {
                         mq.title
                     }
-                } + getString(R.string.create_playlist)).toTypedArray())
+                } + getString(R.string.create_queue)).toTypedArray())
                 { _, item ->
                     if (allQueues.size == item) {
                         PlaylistAdapter.playlistNameDialog(this@MainActivity,
-                            R.string.create_playlist, "",
+                            R.string.create_queue, "",
                             { ItemManipulator.getDefaultPlaylistFile(it) }) { name ->
                             plr.setMediaItemsSeamlessly(items, 0, name.name)
                         }
