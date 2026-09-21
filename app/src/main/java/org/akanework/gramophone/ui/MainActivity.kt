@@ -50,7 +50,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.app.DialogCompat
 import androidx.core.content.IntentCompat
@@ -106,7 +105,7 @@ import org.akanework.gramophone.logic.postAtFrontOfQueueAsync
 import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.BaseActivity
 import org.akanework.gramophone.ui.adapters.PlaylistAdapter
-import org.akanework.gramophone.ui.components.PlayerBottomSheet
+import org.akanework.gramophone.ui.components.player.PlayerSheetViewImpl
 import org.akanework.gramophone.ui.fragments.BaseFragment
 import org.akanework.gramophone.ui.fragments.GeneralSubFragment
 import org.akanework.gramophone.ui.fragments.SearchFragment
@@ -145,7 +144,7 @@ class MainActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val reportFullyDrawnRunnable = Runnable { if (!ready) reportFullyDrawn() }
     private var ready = false
-    lateinit var playerBottomSheet: PlayerBottomSheet
+    lateinit var playerBottomSheet: PlayerSheetViewImpl
         private set
     private lateinit var intentSenderDelete: ActivityResultLauncher<IntentSenderRequest>
     private lateinit var addToPlaylistIntentSender: ActivityResultLauncher<IntentSenderRequest>
