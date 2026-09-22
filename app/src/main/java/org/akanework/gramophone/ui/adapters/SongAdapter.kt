@@ -38,6 +38,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.R
+import org.akanework.gramophone.ui.nav.AlbumKey
+import org.akanework.gramophone.ui.nav.ArtistKey
 import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.logic.getFile
 import org.akanework.gramophone.logic.gramophoneApplication
@@ -48,9 +50,7 @@ import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.ui.MediaControllerViewModel
 import org.akanework.gramophone.ui.SongPickerActivity
 import org.akanework.gramophone.ui.components.NowPlayingDrawable
-import org.akanework.gramophone.ui.fragments.ArtistSubFragment
 import org.akanework.gramophone.ui.fragments.DetailDialogFragment
-import org.akanework.gramophone.ui.fragments.GeneralSubFragment
 import org.akanework.gramophone.ui.fragments.SearchFragment
 import uk.akane.libphonograph.items.addDate
 import uk.akane.libphonograph.items.albumId
@@ -265,18 +265,12 @@ class SongAdapter(
                 }
 
                 R.id.album -> {
-                    mainActivity.startFragment(GeneralSubFragment()) {
-                        putString("Id", item.mediaMetadata.albumId?.toString())
-                        putInt("Item", R.id.album)
-                    }
+                    mainActivity.navigateTo(AlbumKey(item.mediaMetadata.albumId))
                     true
                 }
 
                 R.id.artist -> {
-                    mainActivity.startFragment(ArtistSubFragment()) {
-                        putString("Id", item.mediaMetadata.artistId?.toString())
-                        putInt("Item", R.id.artist)
-                    }
+                    mainActivity.navigateTo(ArtistKey(item.mediaMetadata.artistId, false))
                     true
                 }
 
