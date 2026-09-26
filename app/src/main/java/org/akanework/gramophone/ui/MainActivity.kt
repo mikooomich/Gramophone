@@ -48,7 +48,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
 import androidx.compose.runtime.mutableIntStateOf
@@ -98,9 +97,9 @@ import org.akanework.gramophone.ui.nav.HomeKey
 import org.akanework.gramophone.ui.nav.NavViewModel
 import org.akanework.gramophone.ui.nav.PlaylistKey
 import org.akanework.gramophone.ui.nav.SearchKey
-import org.akanework.gramophone.ui.nav.popIfPossible
 import org.akanework.gramophone.ui.nav.warmUpNavAxisEasing
 import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.nift4.mediastorecompat.MediaStoreCompat
 import uk.akane.libphonograph.dynamicitem.Favorite
 import uk.akane.libphonograph.manipulator.ItemManipulator
@@ -129,8 +128,8 @@ class MainActivity : BaseActivity() {
     }
 
     // Import our viewModels.
-    val controllerViewModel: MediaControllerViewModel by viewModels()
-    val navViewModel: NavViewModel by viewModels()
+    val controllerViewModel: MediaControllerViewModel by viewModel()
+    val navViewModel: NavViewModel by viewModel()
     val startingActivity =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
 
@@ -910,13 +909,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    fun navigateUp() {
-        navViewModel.backStack.popIfPossible()
-    }
-
-    fun navigateTo(key: AppNavKey) {
-        navViewModel.backStack.add(key)
-    }
+    fun navigateTo(key: AppNavKey) = navViewModel.navigateTo(key)
 
     override fun onDestroy() {
         playerSheet.release()
