@@ -18,7 +18,6 @@
 package org.akanework.gramophone.ui
 
 import androidx.activity.compose.setContent
-import org.akanework.gramophone.ui.components.player.PlayerSheetHandle
 import org.akanework.gramophone.ui.components.player.rememberPlayerSheetController
 import android.app.NotificationManager
 import android.app.SearchManager
@@ -40,11 +39,7 @@ import android.provider.Settings
 import android.view.Choreographer
 import android.view.SearchEvent
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.core.app.ActivityCompat
 import androidx.core.app.DialogCompat
@@ -59,34 +54,24 @@ import androidx.media3.common.util.Log
 import androidx.media3.session.DefaultMediaNotificationProvider
 import coil3.imageLoader
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.logic.hasAudioPermission
 import org.akanework.gramophone.logic.hasScopedStorageV2
 import org.akanework.gramophone.logic.hasScopedStorageWithMediaTypes
+import org.akanework.gramophone.logic.library.LibraryRefresher
 import org.akanework.gramophone.logic.library.LibraryWriteRepository
 import org.akanework.gramophone.logic.needsMissingOnDestroyCallWorkarounds
 import org.akanework.gramophone.logic.postAtFrontOfQueueAsync
 import org.akanework.gramophone.logic.setMediaItemsSeamlessly
 import org.akanework.gramophone.logic.ui.BaseActivity
-import org.akanework.gramophone.ui.actions.PlaylistDialogs
-import org.akanework.gramophone.ui.components.compose.AppDialog
 import org.akanework.gramophone.ui.components.compose.AppDialogHostState
 import org.akanework.gramophone.ui.components.compose.MediaConsentHost
-import org.akanework.gramophone.ui.nav.AppNavKey
 import org.akanework.gramophone.ui.nav.AppRoot
 import org.akanework.gramophone.ui.nav.HomeKey
 import org.akanework.gramophone.ui.nav.LocalReportFullyDrawn
@@ -96,12 +81,8 @@ import org.akanework.gramophone.ui.nav.SearchKey
 import org.akanework.gramophone.ui.nav.warmUpNavAxisEasing
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import org.nift4.mediastorecompat.MediaStoreCompat
-import uk.akane.libphonograph.dynamicitem.Favorite
-import uk.akane.libphonograph.manipulator.ItemManipulator
 import uk.akane.libphonograph.manipulator.PlaylistSerializer.Entry
 import uk.akane.libphonograph.reader.FlowReader
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * MainActivity:
@@ -122,35 +103,19 @@ class MainActivity : BaseActivity() {
     }
 
     // Import our viewModels.
-    val controllerViewModel: MediaControllerViewModel by viewModel()
-    val navViewModel: NavViewModel by viewModel()
-    val startingActivity =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+    private val controllerViewModel: MediaControllerViewModel by viewModel()
+    private val navViewModel: NavViewModel by viewModel()
 
     private val handler = Handler(Looper.getMainLooper())
     private val reportFullyDrawnRunnable = Runnable { if (!ready) reportFullyDrawn() }
     private var ready = false
-    // TODO(U7): the actions still reach these through the activity. They are owned by the root
-    //  composition and set from it. Remove once the callers read LocalPlayerSheet / LocalAppDialogs.
-    lateinit var playerSheet: PlayerSheetHandle
-        private set
 
-    /** The dialogs and snackbars the actions ask for, drawn by the root composition. */
-    lateinit var dialogs: AppDialogHostState
-        private set
-    fun updateLibrary(smartScanFirst: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R,
-                      then: (() -> Unit)? = null) {
+    /** The first library load, after which the intent that started us is handled. */
+    private fun loadLibrary() {
         // If library load takes more than 2s, exit splash to avoid ANR
         if (!ready) handler.postDelayed(reportFullyDrawnRunnable, 2000)
-        CoroutineScope(Dispatchers.Default).launch {
-            if (smartScanFirst)
-                MediaStoreCompat.smartScan(this@MainActivity.applicationContext)
-            this@MainActivity.reader.refresh()
-            withContext(Dispatchers.Main) {
-                onLibraryLoaded()
-                then?.let { it() }
-            }
-        }
+        // TODO(U9): intent handling moves off this callback.
+        refresher.refresh { onLibraryLoaded() }
     }
 
     /**
@@ -161,7 +126,7 @@ class MainActivity : BaseActivity() {
         installSplashScreen().setKeepOnScreenCondition { !ready }
         super.onCreate(savedInstanceState)
         lifecycle.addObserver(controllerViewModel)
-        CoroutineScope(Dispatchers.Default).launch { warmUpNavAxisEasing() }
+        lifecycleScope.launch(Dispatchers.Default) { warmUpNavAxisEasing() }
         // TODO: should Activity.setMediaController() or Activity.setVolumeControlStream() be
         //  called? latter will probably not do particularly much, and former will
         //  forward events to our session no matter whether it makes sense or not to currently
@@ -174,10 +139,6 @@ class MainActivity : BaseActivity() {
                 val playerSheet = rememberPlayerSheetController(
                     toggleFavorite = libraryWrites::markFavorite
                 )
-                SideEffect { // TODO(U7)
-                    this.dialogs = dialogs
-                    this.playerSheet = playerSheet
-                }
                 CompositionLocalProvider(LocalReportFullyDrawn provides ::maybeReportFullyDrawn) {
                     AppRoot(
                         backStack = navViewModel.backStack,
@@ -207,78 +168,12 @@ class MainActivity : BaseActivity() {
             )
         } else {
             // If all permissions are granted, we can update library now.
-            if (!this@MainActivity.reader.hadFirstRefresh) {
-                updateLibrary()
+            if (!reader.hadFirstRefresh) {
+                loadLibrary()
             } else onLibraryLoaded() // <-- when recreating activity due to rotation
         }
         if (navViewModel.backStack.lastOrNull() != HomeKey)
             handler.post { maybeReportFullyDrawn() }
-    }
-
-    fun addToPlaylistDialog(item: MediaItem) = addToPlaylistDialog(listOf(item))
-
-    @OptIn(FlowPreview::class, InternalCoroutinesApi::class)
-    fun addToPlaylistDialog(items: List<MediaItem>) {
-        val songs = items.mapNotNull { Entry.ofMediaItem(it) }
-        if (songs.isEmpty()) {
-            Toast.makeText(
-                this@MainActivity,
-                getString(R.string.edit_playlist_failed, "song(s) == null"),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-        lifecycleScope.launch(Dispatchers.Default) {
-            val job = async(start = CoroutineStart.UNDISPATCHED) {
-                reader.playlistListFlow.first().filter { it.title != null }
-            }
-            val maybeValue = withTimeoutOrNull(300.milliseconds) {
-                job.await()
-            }
-            val playlists = maybeValue ?: run {
-                launch(Dispatchers.Main) {
-                    withContext(NonCancellable) {
-                        val progress = AppDialog.Progress(getString(R.string.loading_playlists))
-                        dialogs.show(progress)
-                        job.invokeOnCompletion {
-                            launch(Dispatchers.Main, start = CoroutineStart.ATOMIC) {
-                                withContext(NonCancellable) {
-                                    dialogs.dismissIf(progress)
-                                }
-                            }
-                        }
-                    }
-                }
-                job.await()
-            }
-            launch(Dispatchers.Main) {
-                val names = playlists.map {
-                    if (it is Favorite) getString(R.string.playlist_favourite) else
-                        it.title ?: it.path?.absolutePath ?: it.id.toString()
-                } + getString(R.string.create_playlist)
-                dialogs.show(AppDialog.Choice(
-                    title = getString(R.string.add_to_playlist),
-                    icon = Icons.AutoMirrored.Outlined.PlaylistPlay,
-                    items = names,
-                ) { item ->
-                    if (playlists.size == item) {
-                        PlaylistDialogs.playlistNameDialog(this@MainActivity,
-                            R.string.create_playlist, "",
-                            { ItemManipulator.getDefaultPlaylistFile(it) }) { name ->
-                            libraryWrites.addToPlaylist(null, name, listOf(song))
-                        }
-                        return@Choice
-                    }
-                    val pl = playlists[item]
-                    libraryWrites.addToPlaylist(
-                        ContentUris.withAppendedId(
-                            @Suppress("deprecation") MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI,
-                            pl.id!!
-                        ), null, listOf(song)
-                    )
-                })
-            }
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -342,12 +237,12 @@ class MainActivity : BaseActivity() {
         if (intent.action == Intent.ACTION_VIEW) {
             val id = intent.getStringExtra("playlist")?.toLongOrNull()
             if (id != null) {
-                navigateTo(PlaylistKey(id, null))
+                navViewModel.navigateTo(PlaylistKey(id, null))
             }
         }
         if (intent.action == Intent.ACTION_SEARCH ||
             intent.action == "com.google.android.gms.actions.SEARCH_ACTION") {
-            navigateTo(SearchKey(intent.getStringExtra(SearchManager.QUERY)))
+            navViewModel.navigateTo(SearchKey(intent.getStringExtra(SearchManager.QUERY)))
         }
         if (intent.action == MediaStore.INTENT_ACTION_MEDIA_SEARCH
             || intent.action == MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) {
@@ -445,7 +340,7 @@ class MainActivity : BaseActivity() {
                 }
             } else {
                 // TODO: support sub queries or at least focus to use a different type of search.
-                navigateTo(SearchKey(mainQuery))
+                navViewModel.navigateTo(SearchKey(mainQuery))
             }
         }
         if (intent.action == "org.akanework.gramophone.action.SHUFFLE") {
@@ -481,7 +376,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onSearchRequested(): Boolean {
-        navigateTo(SearchKey(null))
+        navViewModel.navigateTo(SearchKey(null))
         return true
     }
 
@@ -511,7 +406,7 @@ class MainActivity : BaseActivity() {
     override fun onProvideAssistContent(outContent: AssistContent?) {
         super.onProvideAssistContent(outContent)
 
-        val instance = getPlayer()
+        val instance = controllerViewModel.get()
         if (instance != null && outContent != null) {
             /* TODO implement schema.org MusicRecording creation here
             https://developer.android.com/training/articles/assistant
@@ -540,12 +435,12 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    fun onLibraryLoaded() {
+    private fun onLibraryLoaded() {
         Log.i("MainActivity", "onLibraryLoaded()")
         doPlayFromIntent(intent)
     }
 
-    fun maybeReportFullyDrawn() {
+    private fun maybeReportFullyDrawn() {
         if (!ready) reportFullyDrawn()
     }
 
@@ -564,7 +459,7 @@ class MainActivity : BaseActivity() {
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
-                updateLibrary()
+                loadLibrary()
             } else {
                 maybeReportFullyDrawn() // TODO: is this still needed?
                 Toast.makeText(this, getString(R.string.grant_audio), Toast.LENGTH_LONG).show()
@@ -576,12 +471,10 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    fun navigateTo(key: AppNavKey) = navViewModel.navigateTo(key)
-
     override fun onDestroy() {
         // https://github.com/androidx/media/issues/805
         if (needsMissingOnDestroyCallWorkarounds()
-            && (getPlayer()?.playWhenReady != true || getPlayer()?.mediaItemCount == 0)
+            && (controllerViewModel.get()?.playWhenReady != true || controllerViewModel.get()?.mediaItemCount == 0)
         ) {
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID)
@@ -592,12 +485,7 @@ class MainActivity : BaseActivity() {
         imageLoader.memoryCache?.clear()
     }
 
-    /**
-     * getPlayer:
-     *   Returns a media controller.
-     */
-    fun getPlayer() = controllerViewModel.get()
-
-    val reader: FlowReader by inject()
+    private val reader: FlowReader by inject()
+    private val refresher: LibraryRefresher by inject()
     private val libraryWrites: LibraryWriteRepository by inject()
 }
