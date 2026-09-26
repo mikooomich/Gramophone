@@ -95,12 +95,11 @@ import org.akanework.gramophone.logic.supportsWideScreen
 import org.akanework.gramophone.logic.unpinQueue
 import org.akanework.gramophone.logic.utils.CalculationUtils.convertDurationToTimeStamp
 import org.akanework.gramophone.logic.utils.Flags
-import org.akanework.gramophone.logic.utils.convertDurationToTimeStamp
 import org.akanework.gramophone.ui.MainActivity
+import org.akanework.gramophone.ui.components.compose.QueueDropdownMenu
 import org.akanework.gramophone.ui.components.player.QueueSheetHost
 import org.akanework.gramophone.ui.components.player.QueueTimer
 import org.akanework.gramophone.ui.components.player.QueueTimerState
-import org.akanework.gramophone.ui.components.compose.QueueDropdownMenu
 import java.util.LinkedList
 
 @Composable
