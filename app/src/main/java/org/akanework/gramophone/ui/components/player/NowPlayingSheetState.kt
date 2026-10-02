@@ -165,9 +165,10 @@ class NowPlayingSheetState(
 }
 
 /** Drags [state] up and down, and settles it where the drag lets go. */
-internal fun Modifier.sheetDrag(state: NowPlayingSheetState): Modifier =
+internal fun Modifier.sheetDrag(state: NowPlayingSheetState, enabled: Boolean = true): Modifier =
     draggable(
         state = state.dragState,
         orientation = Orientation.Vertical,
+        enabled = enabled,
         onDragStopped = { velocity -> state.settle(velocity) },
     )
