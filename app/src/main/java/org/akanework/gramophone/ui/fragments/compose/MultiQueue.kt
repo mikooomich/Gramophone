@@ -943,12 +943,9 @@ class MqState(
         }
     }
 
-    fun addToPlaylist(queueId: Long) {
-        instance.getQueueForUi(queueId)?.let { mq ->
-            activity.addToPlaylistDialog(mq.first.zip(mq.second.queue).sortedBy { it.first }
-                .map { it.second })
+    fun addToPlaylist(queueId: Long) = instance.getQueueForUi(queueId)?.let { mq ->
+           mq.first.zip(mq.second.queue).sortedBy { it.first }.map { it.second }
         }
-    }
 
     fun renameQueue(queueId: Long, title: String, dryRun: Boolean): Boolean {
         val ret = instance.renameQueue(queueId, title, dryRun)
