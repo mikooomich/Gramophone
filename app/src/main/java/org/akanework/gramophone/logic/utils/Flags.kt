@@ -44,4 +44,7 @@ object Flags {
 
     // mikooo's player rewrite
     const val PLAYER_REWRITE = true
+
+    // Databases
+    const val MIN_PLAYBACK_DUR = 0.30f // until we get ui
 }
