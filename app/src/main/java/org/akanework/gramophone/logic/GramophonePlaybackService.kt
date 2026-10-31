@@ -637,7 +637,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                                     items.items.startPositionMs,
                                     items.title,
                                     items.isPinned,
-                                    true, /* TODO(MQ) */
+                                    items.isOriginal,
                                     items.isEnded,
                                     items.repeatMode,
                                     items.shuffle,
@@ -651,7 +651,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                                     C.TIME_UNSET,
                                     items.title,
                                     items.isPinned,
-                                    true, /* TODO(MQ) */
+                                    items.isOriginal,
                                     items.isEnded,
                                     items.repeatMode,
                                     items.shuffle,
@@ -1014,6 +1014,11 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                             newShuffleOrder = null, ended = false, repeatMode = repeatMode,
                             shuffleModeEnabled = shuffleModeEnabled, playbackParameters = null)
                     }
+                    // save old active queue and the new active queue
+                    val oldActiveQueue = qb.getInactiveQueue(0)!!.id
+                    lastPlayedManager.saveQueue(oldActiveQueue)
+                    lastPlayedManager.saveQueue()
+
                     SessionResult(SessionResult.RESULT_SUCCESS)
                 },
                 mainExecutor
@@ -1178,7 +1183,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     val queueId = customCommand.customExtras.getLong("queueId")
                     val status = if (queueId == plr.currentQueueId) {
                         plr.currentIsPinned = true
-                        lastPlayedManager.saveCurrentQueueMetadataOnly()
+                        lastPlayedManager.saveAllMqMetadata()
                         true
                     } else {
                         val index = qb.masterQueues.indexOfFirst { it.id == queueId }
@@ -1202,7 +1207,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     val queueId = customCommand.customExtras.getLong("queueId")
                     val status = if (queueId == plr.currentQueueId) {
                         endedWorkaroundPlayer!!.currentIsPinned = false
-                        lastPlayedManager.saveCurrentQueueMetadataOnly()
+                        lastPlayedManager.saveAllMqMetadata()
                         true
                     } else {
                         val index = qb.masterQueues.indexOfFirst { it.id == queueId }
@@ -1623,10 +1628,11 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                     Bundle.EMPTY
                 )
             }
-            lastPlayedManager.saveCurrentQueue()
-        } else {
-            lastPlayedManager.saveCurrentQueueMetadataOnly()
         }
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+            lastPlayedManager.saveCurrentMqMetadata()
+        }
+        // Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED is handled by add to queue
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -1645,7 +1651,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         scheduleSendingLyrics(false)
-        lastPlayedManager.saveCurrentQueue()
+        lastPlayedManager.saveCurrentMqMetadata()
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
@@ -1735,14 +1741,14 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.saveCurrentQueue() }
+            handler.post { lastPlayedManager.saveCurrentMqMetadata() }
         }
     }
 
     override fun onRepeatModeChanged(repeatMode: Int) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.saveCurrentQueue() }
+            handler.post { lastPlayedManager.saveCurrentMqMetadata() }
         }
     }
 
@@ -2042,8 +2048,4 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         MediaSession.MediaItemsWithStartPosition(mapped, expanded.startIndex ?: startIndex, startPositionMs)
     }
 
-    fun saveQueuesTemp() {
-        //TODO: temp
-        lastPlayedManager.saveAllQueueMetadata()
-    }
 }
