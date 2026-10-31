@@ -42,4 +42,7 @@ object Flags {
     // Multiple queues
     const val MQ_PREVIEW = true
     const val MQ_ALWAYS_SHOW_QUEUE_ID = false
+
+    // Databases
+    const val MIN_PLAYBACK_DUR = 0.30f // until we get ui
 }
