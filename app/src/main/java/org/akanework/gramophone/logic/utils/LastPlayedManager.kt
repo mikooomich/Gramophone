@@ -18,11 +18,7 @@
 package org.akanework.gramophone.logic.utils
 
 import android.content.Context
-import android.net.Uri
-import android.util.Base64
 import androidx.core.content.edit
-import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.Log
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
@@ -34,7 +30,6 @@ import kotlinx.coroutines.withContext
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.utils.exoplayer.EndedWorkaroundPlayer
-import java.nio.charset.StandardCharsets
 
 class LastPlayedManager(
     context: Context,
@@ -50,22 +45,31 @@ class LastPlayedManager(
     private var job: Job? = null
     private val prefs by lazy { context.getSharedPreferences("LastPlayedManager", 0) }
 
-    fun eraseShuffleOrder() {
-        prefs.edit(commit = true) {
-            putString("shuffle_persist", null)
-        }
-    }
-
     enum class SaveMode {
-        ALL, CURRENT_QUEUE, CURRENT_QUEUE_METADATA, ALL_QUEUE_METADATA
+        ALL, QUEUE, QUEUE_METADATA, ALL_QUEUE_METADATA
     }
 
+    /**
+     * Save all queue data. Same as legacy behaviour
+     */
     fun saveAll() = save(SaveMode.ALL)
-    fun saveAllQueueMetadata() = save(SaveMode.ALL_QUEUE_METADATA)
-    fun saveCurrentQueue() = save(SaveMode.CURRENT_QUEUE)
-    fun saveCurrentQueueMetadataOnly() = save(SaveMode.CURRENT_QUEUE_METADATA)
 
-    private fun save(mode: SaveMode) {
+    /**
+     * Save all queues (excl. media items)
+     */
+    fun saveAllMqMetadata() = save(SaveMode.ALL_QUEUE_METADATA)
+
+    /**
+     * Save current queue (incl. media items)
+     */
+    fun saveQueue(id: Long? = null) = save(SaveMode.QUEUE, id)
+
+    /**
+     * Save current queue (excl. media items)
+     */
+    fun saveCurrentMqMetadata() = save(SaveMode.QUEUE_METADATA)
+
+    private fun save(mode: SaveMode, id: Long? = null) {
         if (!allowSavingState) {
             Log.i(TAG, "skipped save")
             return
@@ -86,24 +90,33 @@ class LastPlayedManager(
                 )
             }
 
+            val q = if (id == null) {
+                activeQueue
+            } else {
+                controller.queueBoard.getInactiveQueues().find { it.id == id }
+            }
+
             when(mode) {
-                SaveMode.CURRENT_QUEUE -> {
-                    database.saveQueue(activeQueue, true)
+                SaveMode.QUEUE -> {
+                    if (q == null) {
+                        throw IllegalArgumentException("trying to save non-existent queue: $id")
+                    }
+                    database.saveQueue(q, id == null)
                 }
-                /*
-                SaveMode.CURRENT_QUEUE_METADATA -> {
-                    database.updateQueue(activeQueue, true)
+                SaveMode.QUEUE_METADATA -> {
+                    if (q == null) {
+                        throw IllegalArgumentException("trying to save non-existent queue: $id")
+                    }
+                    database.updateMq(q, id == null)
                 }
-                 */
-                SaveMode.CURRENT_QUEUE_METADATA, SaveMode.ALL_QUEUE_METADATA -> {
-                    val queues = controller.queueBoard.getInactiveQueues() + activeQueue
-                    database.updateAllQueues(
-                        queues,
-                        activeQueue.index
-                    )
+                SaveMode.ALL_QUEUE_METADATA -> {
+                    val queues = controller.queueBoard.getInactiveQueues()
+                    database.updateMqs(queues, activeQueue)
                 }
                 else -> {
+                    // this the only case a hard reset is intended
                     val queues = controller.queueBoard.getInactiveQueues() + activeQueue
+                    database.deleteAllQueues()
                     queues.forEach {
                         database.saveQueue(it, it == activeQueue)
                     }
@@ -120,7 +133,8 @@ class LastPlayedManager(
     class RestoredPlaylist(
         val items: MediaItemsWithStartPosition, val title: String,
         val seed: CircularShuffleOrder.Persistent?, val isPinned: Boolean, val isEnded: Boolean,
-        val repeatMode: Int, val shuffle: Boolean, val playbackParameters: PlaybackParameters
+        val isOriginal: Boolean, val repeatMode: Int, val shuffle: Boolean,
+        val playbackParameters: PlaybackParameters
     )
 
     suspend fun restore(callback: suspend (RestoredPlaylist?) -> Unit) {
@@ -128,17 +142,6 @@ class LastPlayedManager(
             Log.d(TAG, "decoding playlist...")
         }
         withContext(Dispatchers.Default) {
-            val seed = try {
-                CircularShuffleOrder.Persistent.deserialize(
-                    prefs.getString(
-                        "shuffle_persist",
-                        null
-                    )
-                )
-            } catch (e: Exception) {
-                eraseShuffleOrder()
-                throw e
-            }
             try {
                 val queues = database.readQueues()
                 val activeQueue = queues.first
@@ -151,9 +154,11 @@ class LastPlayedManager(
                 }
 
                 val repeatMode = activeQueue.repeatMode
-                val shuffleModeEnabled = activeQueue.shuffleModeEnabled
+                var shuffleModeEnabled = activeQueue.shuffleModeEnabled
+                var seed = activeQueue.shuffleOrder
                 val pinned = activeQueue.expiry == null
                 val ended = activeQueue.ended
+                val isOriginal = activeQueue.isOriginal
                 val playbackParameters = PlaybackParameters(
                     prefs.getFloat("speed", 1f),
                     prefs.getFloat("pitch", 1f)
@@ -171,92 +176,21 @@ class LastPlayedManager(
                                 "shuffle $shuffleModeEnabled, ended $ended)..."
                     )
                 }
-                if (seed.data != null && seed.data.size != data.mediaItems.size)
-                    throw IllegalStateException("Bad shuffle order size ${seed.data.size} for" +
-                            " ${data.mediaItems.size} items")
-                callback(RestoredPlaylist(data, activeQueue.title,
-                    seed, pinned, ended, repeatMode, shuffleModeEnabled, playbackParameters))
+                if (seed!!.data != null && seed.data.size != data.mediaItems.size) {
+                    Log.e(
+                        TAG, "Bad shuffle order size ${seed.data.size} for" +
+                                " ${data.mediaItems.size} items. Disabling shuffle for this queue.")
+                    shuffleModeEnabled = false
+                    seed = null
+                }
+                callback(RestoredPlaylist(data, activeQueue.title, seed, pinned, ended,
+                    isOriginal, repeatMode, shuffleModeEnabled, playbackParameters))
                 return@withContext
             } catch (e: Exception) {
-                try {
-                    this@LastPlayedManager.eraseShuffleOrder()
-                } catch (_: Exception) {
-                }
                 Log.e(TAG, Log.getThrowableString(e)!!)
                 callback(null)
                 return@withContext
             }
         }
-    }
-}
-
-private class SafeDelimitedStringConcat(private val delimiter: String) {
-    private val b = StringBuilder()
-    private var hadFirst = false
-
-    private fun append(s: String?) {
-        if (s?.contains(delimiter, false) == true) {
-            throw IllegalArgumentException("argument must not contain delimiter")
-        }
-        if (hadFirst) {
-            b.append(delimiter)
-        } else {
-            hadFirst = true
-        }
-        s?.let { b.append(it) }
-    }
-
-    override fun toString(): String {
-        return b.toString()
-    }
-
-    fun writeStringUnsafe(s: CharSequence?) = append(s?.toString())
-    fun writeBase64(b: ByteArray?) = append(b?.let { Base64.encodeToString(it, Base64.DEFAULT) })
-    fun writeStringSafe(s: CharSequence?) =
-        writeBase64(s?.toString()?.toByteArray(StandardCharsets.UTF_8))
-
-    fun writeInt(i: Int?) = append(i?.toString())
-    fun writeLong(i: Long?) = append(i?.toString())
-    fun writeBool(b: Boolean?) = append(b?.toString())
-    fun writeUri(u: Uri?) = writeStringSafe(u?.toString())
-    fun skip() = append(null)
-}
-
-private class SafeDelimitedStringDecat(delimiter: String, str: String) {
-    private val items = str.split(delimiter)
-    private var pos = 0
-
-    private fun read(): String? {
-        if (pos == items.size) return null
-        return items[pos++].ifEmpty { null }
-    }
-
-    fun readStringUnsafe(): String? = read()
-    fun readBase64(): ByteArray? = read()?.let { Base64.decode(it, Base64.DEFAULT) }
-    fun readStringSafe(): String? = readBase64()?.toString(StandardCharsets.UTF_8)
-    fun readInt(): Int? = read()?.toInt()
-    fun readLong(): Long? = read()?.toLong()
-    fun readBool(): Boolean? = read()?.toBooleanStrict()
-    fun readUri(): Uri? = readStringSafe()?.toUri()
-    fun skip() {
-        read()
-    }
-}
-
-private object PrefsListUtils {
-    fun parse(stringSet: Set<String>, groupStr: String): List<String> {
-        if (groupStr.isEmpty()) return emptyList()
-        val groups = groupStr.split(",")
-        return groups.map { hc ->
-            stringSet.firstOrNull { it.hashCode().toString() == hc }
-                ?: throw NoSuchElementException(
-                    "tried to find \"$hc\" (from \"$groupStr\") in: " +
-                            stringSet.joinToString { it.hashCode().toString() })
-        }
-    }
-
-    fun dump(inList: List<String>): Pair<Set<String>, String> {
-        val list = inList.map { it.trim() }
-        return Pair(list.toSet(), list.joinToString(",") { it.hashCode().toString() })
     }
 }

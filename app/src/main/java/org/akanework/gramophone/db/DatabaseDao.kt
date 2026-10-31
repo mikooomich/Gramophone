@@ -36,13 +36,13 @@ interface DatabaseDao : PlayCountDao {
     fun upsert(queueEntity: QueueEntity)
 
     @Transaction
-    fun updateAllQueues(mqs: List<MultiQueueObject>, activeQueueIndex: Int) {
-        val mqs = mqs.toList() // please no more ConcurrentModificationException I beg you
-        mqs.forEachIndexed { index, q -> q.index = index }
-//        nukeAliens(mqs.map { it.id })
-        mqs.forEachIndexed { index, q ->
-            updateQueue(q, index == q.index)
+    fun updateMqs(mqs: List<MultiQueueObject>, activeQueue: MultiQueueObject) {
+        syncQueues((mqs + activeQueue).map { it.id })
+        resetIsActiveQueue()
+        mqs.forEach { q ->
+            updateMq(q, false)
         }
+        updateMq(activeQueue, true)
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -118,12 +118,11 @@ interface DatabaseDao : PlayCountDao {
     }
 
     @Transaction
-    fun updateQueue(mq: MultiQueueObject, isActiveQueue: Boolean) {
-        resetIsActiveQueue()
+    fun updateMq(mq: MultiQueueObject, isActiveQueue: Boolean) {
         upsert(
             QueueEntity(
                 id = mq.id,
-                index = mq.index,
+                index = if (isActiveQueue) -1 else mq.index,
                 isActiveQueue = isActiveQueue,
                 title = mq.title,
                 expiry = mq.expiry,
@@ -138,14 +137,16 @@ interface DatabaseDao : PlayCountDao {
     }
 
     /**
-     * WARNING: This removes all queue song data and re-adds the queue. Did you mean to use updateQueue()?
+     * WARNING: This removes all queue song data and re-adds the queue. Did you mean to use updateMq()?
      */
     @Transaction
     suspend fun saveQueue(mq: MultiQueueObject, isActiveQueue: Boolean) {
         if (mq.queue.isEmpty()) {
             return
         }
-        resetIsActiveQueue()
+        if (isActiveQueue) {
+            resetIsActiveQueue()
+        }
 
         upsert(
             QueueEntity(
