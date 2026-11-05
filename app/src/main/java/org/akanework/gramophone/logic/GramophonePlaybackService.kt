@@ -671,6 +671,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 } else
                     lastPlaylistLoaded.complete(Unit)
             }
+            lastPlayedManager.allowSavingState = true
         }
         scope.launch(Dispatchers.Default) {
             gramophoneApplication.reader.playlistListFlow.map { it.find { p -> p is Favorite } }
@@ -833,7 +834,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         unregisterReceiver(btReceiver)
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         // Important: this must happen before sending stop() as that changes state ENDED -> IDLE
-        lastPlayedManager.saveAll()
+        lastPlayedManager.saveMqMetadata()
         scope.cancel()
         endedWorkaroundPlayer!!.stop()
         handler.removeCallbacks(timer)
@@ -1045,8 +1046,9 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                             shuffleModeEnabled = shuffleModeEnabled, playbackParameters = null)
                     }
                     // save old active queue and the new active queue
-                    val oldActiveQueue = qb.getInactiveQueue(0)!!.id
-                    lastPlayedManager.saveQueue(oldActiveQueue)
+                    qb.getInactiveQueue(0)?.id?.let {
+                        lastPlayedManager.saveMqMetadata(it)
+                    }
                     lastPlayedManager.saveQueue()
 
                     SessionResult(SessionResult.RESULT_SUCCESS)
@@ -1660,7 +1662,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             }
         }
         if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
-            lastPlayedManager.saveCurrentMqMetadata()
+            lastPlayedManager.saveMqMetadata()
         }
         // Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED is handled by add to queue
     }
@@ -1681,7 +1683,9 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         scheduleSendingLyrics(false)
-        lastPlayedManager.saveCurrentMqMetadata()
+        if (isPlaying == false) {
+            lastPlayedManager.saveMqMetadata()
+        }
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
@@ -1771,20 +1775,19 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.saveCurrentMqMetadata() }
+            handler.post { lastPlayedManager.saveMqMetadata() }
         }
     }
 
     override fun onRepeatModeChanged(repeatMode: Int) {
         refreshMediaButtonCustomLayout()
         if (needsMissingOnDestroyCallWorkarounds()) {
-            handler.post { lastPlayedManager.saveCurrentMqMetadata() }
+            handler.post { lastPlayedManager.saveMqMetadata() }
         }
     }
 
     override fun onTimelineChanged(timeline: Timeline, reason: @Player.TimelineChangeReason Int) {
         if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
-            lastPlayedManager.allowSavingState = true
             lastPlaylistLoaded.complete(Unit)
             refreshMediaButtonCustomLayout()
             if (!computeRgMode(false))
