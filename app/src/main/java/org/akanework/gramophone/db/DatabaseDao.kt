@@ -1,5 +1,6 @@
 package org.akanework.gramophone.db
 
+import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -75,7 +76,7 @@ interface DatabaseDao : PlayCountDao {
     fun getQueueSongs(queueId: Long): List<SongTagEntity>
 
     @Transaction
-    fun readQueues(): Pair<MultiQueueObject?, List<MultiQueueObject>> {
+    fun readQueues(): Pair<MultiQueueObject?, MutableList<MultiQueueObject>> {
         val inactiveQueues = ArrayList<MultiQueueObject>()
         val queues = getAllQueues()
         var activeQueue: MultiQueueObject? = null
@@ -83,6 +84,7 @@ interface DatabaseDao : PlayCountDao {
         queues.forEach { queue ->
             val songs = getQueueSongs(queue.id)
             if (songs.isEmpty()) {
+                Log.w("DatabaseDao", "readQueues(): have queue but no songs... this is unexpected...")
                 deleteQueue(queue.id)
                 return@forEach
             }
@@ -142,6 +144,7 @@ interface DatabaseDao : PlayCountDao {
     @Transaction
     suspend fun saveQueue(mq: MultiQueueObject, isActiveQueue: Boolean) {
         if (mq.queue.isEmpty()) {
+            Log.e("DatabaseDao","saveQueue(): cannot save empty queue: $mq")
             return
         }
         if (isActiveQueue) {
@@ -169,7 +172,7 @@ interface DatabaseDao : PlayCountDao {
 
         // why does kotlin not have for i loop???
         var i = 0
-        while (i < mq.getSize()) {
+        while (i < mq.queue.size) {
             upsert(mq.queue[i].toSongTagEntity()) // make sure song exists
             insert(
                 QueueSongMap(

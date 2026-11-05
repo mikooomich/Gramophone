@@ -418,6 +418,7 @@ data class MultiQueueObject(
 ) {
     override fun toString() =
         "$title ($id), index=$index, startIndex=$startIndex, startPositionMs=$startPositionMs, repeatMode=$repeatMode, shuffleModeEnabled=$shuffleModeEnabled, ended=$ended, isOriginal=$isOriginal, expiry=$expiry, mediaItems_size=${queue.size}"
+
     val shuffleModeEnabled
         get() = shuffleOrder != null
 
