@@ -448,10 +448,10 @@ fun MqList(
         itemsIndexed(
             items = mqState.inactiveQueues,
             key = { _, item -> item.id },
-        ) { index, mq ->
+        ) { _, mq ->
             MqListItem(
                 mqState = mqState,
-                index = index,
+                index = mq.index,
                 mq = mq,
                 isActiveQueue = false,
                 isHighlightedQueue = mq == mqState.detachedQueue,
@@ -459,7 +459,6 @@ fun MqList(
                 onClick = {
                     if (mqState.detachedQueue != mq) {
                         mqState.detach(mq)
-                        // TODO: scroll to when click
                     }
                 },
                 onLongClick = {
