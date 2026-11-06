@@ -367,10 +367,10 @@ dependencies {
     debugImplementation(kotlin("reflect", kotlinVersion))
 
     // TODO: make prettier when I feel cute
-    val room_version = "2.8.4"
-    implementation("androidx.room:room-runtime:$room_version")
-    ksp("androidx.room:room-compiler:$room_version")
-//    implementation("androidx.room:room-ktx:${room_version}")
+    val room_version = "3.0.3"
+    implementation("androidx.room3:room3-runtime:$room_version")
+    ksp("androidx.room3:room3-compiler:$room_version")
+//    implementation("androidx.room3:room3-ktx:${room_version}")
     implementation("com.google.dagger:hilt-android:2.60.1")
     ksp("com.google.dagger:hilt-android-compiler:2.60.1")
 

@@ -3,8 +3,8 @@ package org.akanework.gramophone.db.entities
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room3.Entity
+import androidx.room3.PrimaryKey
 
 @Immutable
 @Entity(tableName = "queue")
