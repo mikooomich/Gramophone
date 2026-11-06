@@ -5,8 +5,8 @@ import android.os.Bundle
 import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room3.Entity
+import androidx.room3.PrimaryKey
 import org.akanework.gramophone.logic.getFile
 import uk.akane.libphonograph.items.EXTRA_ADD_DATE
 import uk.akane.libphonograph.items.EXTRA_ALBUM_ID

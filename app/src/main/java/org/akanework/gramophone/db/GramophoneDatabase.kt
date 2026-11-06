@@ -17,11 +17,13 @@
 package org.akanework.gramophone.db
 
 import android.content.Context
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
+import androidx.room3.ColumnTypeConverter
+import androidx.room3.ColumnTypeConverters
+import androidx.room3.Database
+import androidx.room3.Room
+import androidx.room3.RoomDatabase
+import androidx.room3.useReaderConnection
+import androidx.room3.useWriterConnection
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import org.akanework.gramophone.db.GramophoneDatabase.Companion.MUSIC_DATABASE_VERSION
 import org.akanework.gramophone.db.entities.ChromaprintEntity
@@ -39,19 +41,21 @@ import java.time.ZoneOffset
 class GramophoneDatabase(
     private val delegate: AppDatabase,
 ) : DatabaseDao by delegate.dao {
-    val openHelper: SupportSQLiteOpenHelper
-        get() = delegate.openHelper
-
-    fun query(block: GramophoneDatabase.() -> Unit) = with(delegate) {
-        queryExecutor.execute {
-            block(this@GramophoneDatabase)
+    suspend fun checkpoint() {
+        delegate.useWriterConnection { conn ->
+            conn.usePrepared("PRAGMA wal_checkpoint(FULL)") {
+              it.step()
+            }
         }
     }
 
-    fun transaction(block: GramophoneDatabase.() -> Unit) = with(delegate) {
-        transactionExecutor.execute {
-            runInTransaction {
-                block(this@GramophoneDatabase)
+    suspend fun isDatabaseIntegrityOk() {
+        delegate.useReaderConnection { conn ->
+            conn.usePrepared("PRAGMA integrity_check") { stmt ->
+                val results = buildList {
+                    while (stmt.step()) add(stmt.getText(0))
+                }
+                results.size == 1 && results[0].equals("ok", ignoreCase = true)
             }
         }
     }
@@ -79,7 +83,7 @@ class GramophoneDatabase(
     ]
 )
 
-@TypeConverters(Converters::class)
+@ColumnTypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: DatabaseDao
 
@@ -110,12 +114,12 @@ abstract class AppDatabase : RoomDatabase() {
 }
 
 class Converters {
-    @TypeConverter
+    @ColumnTypeConverter
     fun fromTimestamp(value: Long?): LocalDateTime? =
         if (value != null) LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneOffset.UTC)
         else null
 
-    @TypeConverter
+    @ColumnTypeConverter
     fun dateToTimestamp(date: LocalDateTime?): Long? =
         date?.atZone(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
 }
