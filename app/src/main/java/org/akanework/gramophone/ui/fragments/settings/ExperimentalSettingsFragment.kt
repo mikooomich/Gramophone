@@ -25,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.media3.common.util.Log
 import androidx.preference.Preference
+import androidx.room3.useReaderConnection
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,16 +76,17 @@ class ExperimentalSettingsFragment() : BasePreferenceFragment() {
                         runBlocking(Dispatchers.IO) {
                             database.checkpoint()
                         }
-                        FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
+                        FileInputStream(requireContext().getDatabasePath(AppDatabase.DB_NAME)).use { inputStream ->
                             outputStream.putNextEntry(ZipEntry(AppDatabase.DB_NAME))
                             inputStream.copyTo(outputStream)
+                            outputStream.close()
                         }
                     }
                 }
             }.onSuccess {
-                Toast.makeText(context, "Success", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Success", Toast.LENGTH_SHORT).show()
             }.onFailure {
-                Toast.makeText(context, "Failled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed", Toast.LENGTH_SHORT).show()
                 it.printStackTrace()
             }
         }
@@ -120,7 +122,9 @@ class ExperimentalSettingsFragment() : BasePreferenceFragment() {
 
                                     val status = try {
                                         val t = AppDatabase.newTestInstance(requireContext(), AppDatabase.TEST_DB_NAME)
-                                        t.openHelper.writableDatabase.isDatabaseIntegrityOk
+                                        runBlocking(Dispatchers.IO) {
+                                            t.isDatabaseIntegrityOk()
+                                        }
                                         t.close()
                                         true
                                     } catch (e: Exception) {
@@ -131,7 +135,7 @@ class ExperimentalSettingsFragment() : BasePreferenceFragment() {
                                     if (status) {
                                         Log.i(TAG, "Found valid database, proceeding with restore")
                                         destFile.inputStream().use { inputStream ->
-                                            FileOutputStream(database.openHelper.writableDatabase.path).use { outputStream ->
+                                            FileOutputStream(requireContext().getDatabasePath(AppDatabase.DB_NAME)).use { outputStream ->
                                                 inputStream.copyTo(outputStream)
                                             }
                                         }

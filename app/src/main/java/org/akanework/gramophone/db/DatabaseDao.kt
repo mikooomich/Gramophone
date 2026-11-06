@@ -1,14 +1,14 @@
 package org.akanework.gramophone.db
 
 import android.util.Log
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.RawQuery
-import androidx.room.Transaction
-import androidx.room.Upsert
+import androidx.room3.Dao
+import androidx.room3.Delete
+import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
+import androidx.room3.Query
+import androidx.room3.RawQuery
+import androidx.room3.Transaction
+import androidx.room3.Upsert
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
 import org.akanework.gramophone.db.entities.PlayEventEntity
@@ -212,14 +212,6 @@ interface DatabaseDao : PlayCountDao {
     @Transaction
     @Query("SELECT * from play_event LEFT JOIN song ON play_event.songId = song.id  ORDER BY timestamp DESC ")
     fun history(): List<PlayEventWithSong>
-
-
-    @RawQuery
-    fun raw(supportSQLiteQuery: SupportSQLiteQuery): Int
-
-    fun checkpoint() {
-        raw("PRAGMA wal_checkpoint(FULL)".toSQLiteQuery())
-    }
 }
 
 fun String.toSQLiteQuery(): SimpleSQLiteQuery = SimpleSQLiteQuery(this)

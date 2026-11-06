@@ -358,7 +358,7 @@ dependencies {
     // --- below does not apply to release builds ---
 //    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.17-beta-2")
+    testImplementation("org.robolectric:robolectric:4.17")
     "userdebugImplementation"(kotlin("reflect", kotlinVersion)) // who thought String.invoke() is a good idea?????
     debugImplementation(kotlin("reflect", kotlinVersion))
 

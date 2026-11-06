@@ -17,8 +17,8 @@
 package org.akanework.gramophone.db
 
 import androidx.compose.ui.util.fastSumBy
-import androidx.room.Embedded
-import androidx.room.Relation
+import androidx.room3.Embedded
+import androidx.room3.Relation
 import org.akanework.gramophone.db.entities.ChromaprintEntity
 import org.akanework.gramophone.db.entities.PlayEventEntity
 import org.akanework.gramophone.db.entities.PlayEventLegacyEntity
@@ -27,8 +27,8 @@ import org.akanework.gramophone.db.entities.SongEntity
 data class Song(
     @Embedded val song: SongEntity,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "songId"
+        parentColumns = ["id"],
+        entityColumns = ["songId"]
     )
     val chromaprints: List<ChromaprintEntity>
 )
@@ -36,18 +36,18 @@ data class Song(
 data class SongWithPlaycount(
     @Embedded val song: SongEntity,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "songId"
+        parentColumns = ["id"],
+        entityColumns = ["songId"]
     )
     val chromaprints: List<ChromaprintEntity>,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "songId"
+        parentColumns = ["id"],
+        entityColumns = ["songId"]
     )
     val playEvents: List<PlayEventEntity>,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "songId"
+        parentColumns = ["id"],
+        entityColumns = ["songId"]
     )
     val playEventsLegacy: List<PlayEventLegacyEntity>,
 ) {
@@ -62,8 +62,8 @@ data class SongWithPlaycount(
 data class PlayEventWithSong(
     @Embedded val event: PlayEventEntity,
     @Relation(
-        parentColumn = "songId",
-        entityColumn = "id"
+        parentColumns = ["songId"],
+        entityColumns = ["id"]
     )
     val song: SongEntity
 )

@@ -17,11 +17,11 @@
 package org.akanework.gramophone.db
 
 import androidx.media3.common.MediaItem
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Transaction
+import androidx.room3.Dao
+import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
+import androidx.room3.Query
+import androidx.room3.Transaction
 import org.akanework.gramophone.db.entities.ChromaprintEntity
 import org.akanework.gramophone.db.entities.PlayEventEntity
 import org.akanework.gramophone.db.entities.PlayEventLegacyEntity
