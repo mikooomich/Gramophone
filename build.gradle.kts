@@ -5,12 +5,12 @@ plugins {
     id("com.android.built-in-kotlin") version agpVersion apply false
 	id("com.android.library") version agpVersion apply false
 	id("com.android.test") version agpVersion apply false
-	id("androidx.baselineprofile") version "1.5.0-alpha07" apply false
-    val kotlinVersion = "2.3.0"
+	id("androidx.baselineprofile") version "1.5.0" apply false
+    val kotlinVersion = "2.4.21"
 	kotlin("android") version kotlinVersion apply false
     kotlin("plugin.parcelize") version kotlinVersion apply false
     kotlin("plugin.compose") version kotlinVersion apply false
-    val aboutLibsVersion = "14.0.0-b02"
+    val aboutLibsVersion = "15.3.0"
     id("com.mikepenz.aboutlibraries.plugin") version aboutLibsVersion apply false
     id("com.mikepenz.aboutlibraries.plugin.android") version aboutLibsVersion apply false
     id("com.osacky.doctor") version "0.12.1"

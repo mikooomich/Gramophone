@@ -53,7 +53,7 @@ class ViewCompatInflater
                     a.recycle()
                 } ?: -1
                 if (fontWeight != -1) {
-                    val tf = TypefaceCompat.create(context, typeface, fontWeight, typeface.isItalic)
+                    val tf = TypefaceCompat.create(context, typeface, fontWeight, typeface!!.isItalic)
                     setTypeface(tf)
                 }
             }
@@ -73,7 +73,7 @@ class ViewCompatInflater
                     a.recycle()
                 } ?: -1
                 if (fontWeight != -1) {
-                    val tf = TypefaceCompat.create(context, typeface, fontWeight, typeface.isItalic)
+                    val tf = TypefaceCompat.create(context, typeface, fontWeight, typeface!!.isItalic)
                     setTypeface(tf)
                 }
             }
