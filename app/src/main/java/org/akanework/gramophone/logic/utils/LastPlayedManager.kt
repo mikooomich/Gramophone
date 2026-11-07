@@ -22,15 +22,24 @@ import androidx.core.content.edit
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.Log
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.utils.exoplayer.EndedWorkaroundPlayer
+import java.util.PriorityQueue
+import kotlin.time.Duration.Companion.milliseconds
 
 class LastPlayedManager(
     context: Context,
@@ -42,12 +51,21 @@ class LastPlayedManager(
         private const val TAG = "LastPlayedManager"
     }
 
-    var allowSavingState = true
-    private var job: Job? = null
+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+    var allowSavingState = Mutex()
     private val prefs by lazy { context.getSharedPreferences("LastPlayedManager", 0) }
 
+    val queueJobs = PriorityQueue<PriorityJob>()
+    val mqJobs = PriorityQueue<PriorityJob>()
+
+    class PriorityJob(val priority: Int, val id: Long?, val job: Job) : Comparable<PriorityJob> {
+        override fun compareTo(other: PriorityJob): Int = this.priority - other.priority
+    }
+
+    // TODO(mq): explain how the queues to save queues work, the looper, etc
     enum class SaveMode {
-        ALL, QUEUE, QUEUE_METADATA, ALL_QUEUE_METADATA
+        ALL, QUEUE, // queueJobs
+        ALL_QUEUE_METADATA, QUEUE_METADATA, // mqJobs
     }
 
     /**
@@ -72,77 +90,32 @@ class LastPlayedManager(
     fun saveMqMetadata(id: Long? = null) = save(SaveMode.QUEUE_METADATA, id)
 
     private fun save(mode: SaveMode, id: Long? = null) {
-        if (!allowSavingState) {
-            Log.i(TAG, "skipped save")
-            return
-        }
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "dumping playlist... Mode=$mode")
+            Log.d(TAG, "dumping playlist & submitting mode=$mode...")
         }
 
         val playbackParameters = controller.playbackParameters
         val activeQueue = controller.getActiveQueue().copy()
-        if (mode == SaveMode.ALL) {
-            job?.cancel()
+        val inactiveQueues = controller.queueBoard.getInactiveQueues().toImmutableList()
+
+        val q = if (id == null) {
+            activeQueue
+        } else {
+            inactiveQueues.find { it.id == id }
         }
-        job = CoroutineScope(Dispatchers.Default).launch {
-            if (mode != SaveMode.ALL) {
-                job?.join()
-            }
 
-            val q = if (id == null) {
-                activeQueue
-            } else {
-                controller.queueBoard.getInactiveQueues().find { it.id == id }
-            }
-
-            when(mode) {
-                SaveMode.QUEUE -> {
-                    if (q == null) {
-                        throw IllegalArgumentException("trying to save non-existent queue: $id")
-                    }
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "saving playlist $q")
-                    }
-                    database.saveQueue(q, id == null)
-                }
-                SaveMode.QUEUE_METADATA -> {
-                    if (q == null) {
-                        throw IllegalArgumentException("trying to save non-existent queue: $id")
-                    }
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "saving playlist $q")
-                    }
-                    database.updateMq(q, id == null)
-                }
-                SaveMode.ALL_QUEUE_METADATA -> {
-                    val queues = controller.queueBoard.getInactiveQueues()
-                    if (BuildConfig.DEBUG) {
-                        queues.forEach { Log.d(TAG, "saving playlist $it") }
-                    }
-                    database.updateMqs(queues, activeQueue.copy())
-                }
-                SaveMode.ALL -> {
-                    // this the only case a hard reset is intended
-                    val queues = controller.queueBoard.getInactiveQueues() + activeQueue
-                    database.deleteAllQueues()
-                    if (BuildConfig.DEBUG) {
-                        queues.forEach { Log.d(TAG, "saving playlist $it") }
-                    }
-                    queues.forEach {
-                        database.saveQueue(it, it == activeQueue)
-                    }
-                }
-            }
-
+        fun onSave() {
             if (BuildConfig.DEBUG) {
                 val mqs = database.readQueues()
-                Log.d(TAG, "Saved queues. Queues before ${1 + controller.queueBoard.getInactiveQueues().size}, queues after ${mqs.second.size + if (mqs.first == null) 0 else 1}")
+                Log.d(
+                    TAG,
+                    "Saved queues. Queues before ${1 + inactiveQueues.size}, queues after ${mqs.second.size + if (mqs.first == null) 0 else 1}"
+                )
                 /*
-                (controller.queueBoard.getInactiveQueues() + activeQueue).forEach {
+                (inactiveQueues + activeQueue).forEach {
                     Log.i(TAG, "old: " + it)
                 }
-                (mqs.second +mqs.first).mapNotNull {
+                (mqs.second + mqs.first).mapNotNull {
                     Log.i(TAG, "new: " + it)
                 }
                  */
@@ -153,6 +126,117 @@ class LastPlayedManager(
                 putFloat("pitch", playbackParameters.pitch)
                 apply()
             }
+            Log.d(TAG, "Save complete")
+
+        }
+
+        when (mode) {
+            SaveMode.QUEUE -> {
+                if (q == null) {
+                    throw IllegalArgumentException("trying to save non-existent queue: $id")
+                }
+                queueJobs.add(
+                    PriorityJob(1, q.id, coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "mode=$mode: saving playlist $q")
+                        }
+                        database.saveQueue(q, id == null)
+                        onSave()
+                        mqJobs.removeIf { q.id == it.id }
+                    })
+                )
+            }
+
+            SaveMode.QUEUE_METADATA -> {
+                if (q == null) {
+                    throw IllegalArgumentException("trying to save non-existent queue: $id")
+                }
+                mqJobs.add(
+                    PriorityJob(1, q.id, coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "mode=$mode: saving playlist $q")
+                        }
+                        database.updateMq(q, id == null)
+                        onSave()
+                    })
+                )
+            }
+
+            SaveMode.ALL_QUEUE_METADATA -> {
+                mqJobs.add(
+                    PriorityJob(0, null, coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        val queues = inactiveQueues
+                        if (BuildConfig.DEBUG) {
+                            queues.forEach { Log.d(TAG, "mode=$mode: saving playlist $it") }
+                        }
+                        database.updateMqs(queues, activeQueue.copy())
+                        onSave()
+                        mqJobs.clear()
+                    })
+                )
+            }
+
+            SaveMode.ALL -> {
+                // this the only case a hard reset is intended
+                queueJobs.add(
+                    PriorityJob(0, null, coroutineScope.launch(start = CoroutineStart.LAZY) {
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "Nuking and saving all queues")
+                        }
+                        val queues = inactiveQueues + activeQueue
+                        database.deleteAllQueues()
+                        if (BuildConfig.DEBUG) {
+                            queues.forEach { Log.d(TAG, "mode=$mode: saving playlist $it") }
+                        }
+                        queues.forEach {
+                            database.saveQueue(it, it == activeQueue)
+                        }
+                        onSave()
+                        queueJobs.clear()
+                    })
+                )
+            }
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            if (allowSavingState.isLocked) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Database save task is already active, aborting")
+                }
+                return@launch
+            }
+
+            Log.d(TAG, "Starting database save looper...")
+
+            // run until there are no more tasks left
+            allowSavingState.withLock {
+                while (!queueJobs.isEmpty() || !mqJobs.isEmpty()) {
+                    delay(1000L.milliseconds)
+
+                    Log.d(TAG, "Running database save task")
+
+                    // saving songs nukes the queue entity in the process, about it shouldn't matter since are same queue object
+                    val jobs: PriorityQueue<PriorityJob> = if (!queueJobs.isEmpty()) {
+                        queueJobs
+                    } else if (!mqJobs.isEmpty()) {
+                        mqJobs
+                    } else {
+                        PriorityQueue()
+                    }
+
+                    if (!jobs.isEmpty()) {
+                        var items = jobs.toList().dropLast(1)
+                        val job = jobs.last()
+                        job.job.start()
+                        job.job.join()
+                        jobs.clear()
+                        items = items.filterNot { job.id == it.id && it.id != null }
+                        jobs.addAll(items)
+                    }
+                }
+            }
+
+            Log.d(TAG, "Exiting database save looper")
         }
     }
 

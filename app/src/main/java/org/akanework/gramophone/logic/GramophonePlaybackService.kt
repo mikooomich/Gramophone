@@ -478,7 +478,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
         player.exoPlayer.addAnalyticsListener(playbackStatsListener)
         player.exoPlayer.setShuffleOrder(CircularShuffleOrder(player, 0, 0, Random.nextLong()))
         lastPlayedManager = LastPlayedManager(this, player, database)
-        lastPlayedManager.allowSavingState = false
+        lastPlayedManager.allowSavingState.tryLock(this@GramophonePlaybackService)
         libraryTreeLoader = LibraryTreeLoader(
             this,
             gramophoneApplication,
@@ -625,7 +625,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 if (items != null) {
                     val list = mapMediaItemsForFavorites(items.items.mediaItems)
                     withContext(Dispatchers.Main) {
-                        if (lastPlayedManager.allowSavingState)
+                        if (!lastPlayedManager.allowSavingState.isLocked)
                             return@withContext // media items were already applied to player
                         try {
                             if (list.size >= items.items.startIndex) {
@@ -671,7 +671,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
                 } else
                     lastPlaylistLoaded.complete(Unit)
             }
-            lastPlayedManager.allowSavingState = true
+            lastPlayedManager.allowSavingState.unlock(this@GramophonePlaybackService)
         }
         scope.launch(Dispatchers.Default) {
             gramophoneApplication.reader.playlistListFlow.map { it.find { p -> p is Favorite } }
@@ -1195,6 +1195,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
                     if (index != -1) {
                         qb.commitQueue(index, startIndex)
+                        // no need to save queues, media items never change and save is called elsewhere
 
                         for (controller in mediaSession!!.connectedControllers) {
                             val customCommand = buildMqCustomCommand(CLIENT_QB_REFRESH_ALL, null)
