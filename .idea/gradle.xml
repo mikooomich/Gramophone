@@ -7,6 +7,12 @@
         <compositeConfiguration>
           <compositeBuild compositeDefinitionSource="SCRIPT">
             <builds>
+              <build path="$PROJECT_DIR$/../ffMetadataEx" name="ffMetadataEx">
+                <projects>
+                  <project path="$PROJECT_DIR$/../ffMetadataEx" />
+                  <project path="$PROJECT_DIR$/../ffMetadataEx/ffMetadataEx" />
+                </projects>
+              </build>
               <build path="$PROJECT_DIR$/media3" name="androidx.media3">
                 <projects>
                   <project path="$PROJECT_DIR$/media3" />
@@ -132,6 +138,8 @@
             <option value="$PROJECT_DIR$/misc/audiofxfwd" />
             <option value="$PROJECT_DIR$/misc/audiofxstub" />
             <option value="$PROJECT_DIR$/misc/audiofxstub2" />
+            <option value="$PROJECT_DIR$/../ffMetadataEx" />
+            <option value="$PROJECT_DIR$/../ffMetadataEx/ffMetadataEx" />
           </set>
         </option>
       </GradleProjectSettings>
