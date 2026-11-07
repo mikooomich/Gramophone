@@ -195,7 +195,7 @@ fun GroupToggleButton(
         onCheckedChange = { onClick() },
         modifier = modifier,
         shapes = shapes,
-        colors = ToggleButtonDefaults.toggleButtonColors(
+        colors = ToggleButtonDefaults.colors(
             containerColor = container,
             checkedContainerColor = checkedContainer,
         ),
