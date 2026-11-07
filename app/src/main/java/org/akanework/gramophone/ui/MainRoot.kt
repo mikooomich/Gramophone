@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalResources
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.BuildConfig
 import org.akanework.gramophone.R
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.AppUiEvent
 import org.akanework.gramophone.logic.AppUiEvents
 import org.akanework.gramophone.logic.library.LibraryWriteRepository
@@ -58,6 +60,7 @@ internal fun MainRoot(
     onLibraryPermissionDenied: () -> Unit,
     startSplashTimeout: () -> Unit,
     reportFullyDrawn: () -> Unit,
+    database: GramophoneDatabase,
 ) {
     LaunchedEffect(Unit) { withContext(Dispatchers.Default) { warmUpNavAxisEasing() } }
     GramophoneTheme {
@@ -74,7 +77,10 @@ internal fun MainRoot(
         )
         // Under the pages, which hide it
         DrawWarmUp { MainSettingsScreen(onBack = {}, onNavigate = {}) }
-        CompositionLocalProvider(LocalReportFullyDrawn provides reportFullyDrawn) {
+        CompositionLocalProvider(
+            LocalReportFullyDrawn provides reportFullyDrawn,
+            LocalDatabase provides database,
+        ) {
             AppRoot(
                 playerSheet = playerSheet,
                 dialogs = dialogs,
@@ -114,3 +120,5 @@ private fun AppUiEventsHost(dialogs: AppDialogHostState) {
         }
     }
 }
+
+val LocalDatabase = staticCompositionLocalOf<GramophoneDatabase> { error("No database provided") }
