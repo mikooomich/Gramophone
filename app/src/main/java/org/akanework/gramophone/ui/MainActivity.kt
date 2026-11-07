@@ -32,6 +32,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.util.Log
 import androidx.media3.session.DefaultMediaNotificationProvider
 import coil3.imageLoader
+import dagger.hilt.android.AndroidEntryPoint
+import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.logic.needsMissingOnDestroyCallWorkarounds
 import org.akanework.gramophone.logic.postAtFrontOfQueueAsync
@@ -42,6 +44,7 @@ import org.akanework.gramophone.ui.nav.HomeKey
 import org.akanework.gramophone.ui.nav.NavViewModel
 import org.akanework.gramophone.ui.nav.SearchKey
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import javax.inject.Inject
 
 /**
  * MainActivity:
@@ -50,7 +53,11 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
  *
  * @author AkaneTan, nift4
  */
+@AndroidEntryPoint
 class MainActivity : BaseActivity() {
+
+    @Inject
+    lateinit var database: GramophoneDatabase
 
     private val controllerViewModel: MediaControllerViewModel by viewModel()
     private val navViewModel: NavViewModel by viewModel()
@@ -80,6 +87,7 @@ class MainActivity : BaseActivity() {
                 onLibraryPermissionDenied = ::onLibraryPermissionDenied,
                 startSplashTimeout = ::startSplashTimeout,
                 reportFullyDrawn = ::maybeReportFullyDrawn,
+                database = database,
             )
         }
 

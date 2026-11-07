@@ -44,6 +44,7 @@ import org.akanework.gramophone.ui.components.settings.PreferenceGroup
 import org.akanework.gramophone.ui.components.settings.PreferenceScreen
 import org.akanework.gramophone.ui.components.settings.PreferenceSectionHeader
 import org.akanework.gramophone.ui.components.settings.SwitchPreferenceRow
+import org.akanework.gramophone.ui.fragments.settings.DbDebugScreen
 import java.io.File
 import java.nio.charset.Charset
 
@@ -105,6 +106,9 @@ fun ExperimentalSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier
                 checked = playerRw.value,
                 onCheckedChange = { playerRw.set(it) },
             )
+        }
+        add { shape ->
+            DbDebugScreen(shape)
         }
     }
 
