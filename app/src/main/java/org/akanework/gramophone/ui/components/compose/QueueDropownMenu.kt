@@ -98,7 +98,7 @@ fun QueueDropdownMenu(
     val env = rememberAppActionEnv()
 
     val actions = ArrayList<DropdownItem>()
-    if (isActiveQueue) {
+    if (!isActiveQueue) {
         actions.add(
             DropdownItem(
                 title = stringResource(R.string.play),
