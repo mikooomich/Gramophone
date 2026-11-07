@@ -1163,7 +1163,11 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
 
                     if (index != -1) {
                         qb.commitQueue(index, startIndex)
-                        // no need to save queues, media items never change and save is called elsewhere
+                        // save old active queue and the new active queue
+                        qb.getInactiveQueue(0)?.id?.let {
+                            lastPlayedManager.saveMqMetadata(it)
+                        }
+                        lastPlayedManager.saveQueue()
 
                         for (controller in mediaSession!!.connectedControllers) {
                             val customCommand = buildMqCustomCommand(CLIENT_QB_REFRESH_ALL, null)
