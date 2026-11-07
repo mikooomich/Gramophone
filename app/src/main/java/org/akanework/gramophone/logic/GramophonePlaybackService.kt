@@ -117,9 +117,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.akanework.gramophone.R
 import org.akanework.gramophone.logic.library.LibraryWriteRepository
-import org.akanework.gramophone.db.InternalDatabase
-import org.akanework.gramophone.db.MusicDatabase
-import org.akanework.gramophone.db.AppDatabase
 import org.akanework.gramophone.db.GramophoneDatabase
 import org.akanework.gramophone.logic.ui.MeiZuLyricsMediaNotificationProvider
 import org.akanework.gramophone.logic.ui.isManualNotificationUpdate
