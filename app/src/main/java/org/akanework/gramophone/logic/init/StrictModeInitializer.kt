@@ -45,7 +45,7 @@ object StrictModeInitializer {
                         else it
                     }
                     .penaltyLog()
-                    .penaltyDialog()
+//                    .penaltyDialog()
                     .build()
             )
             StrictMode.setVmPolicy(
