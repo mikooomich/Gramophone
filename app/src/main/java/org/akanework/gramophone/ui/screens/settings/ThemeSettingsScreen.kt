@@ -46,6 +46,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -93,6 +94,7 @@ import org.akanework.gramophone.ui.theme.hue
 import org.akanework.gramophone.ui.theme.rememberThemeSettings
 import org.akanework.gramophone.ui.theme.supportsWallpaperColor
 import org.akanework.gramophone.ui.theme.themeModeOf
+import kotlin.ranges.rangeTo
 
 /** The custom seed's chroma and tone, in the hue picked. */
 private val SEED = ChromaTone(chroma = 48.0, tone = 40.0)
@@ -235,10 +237,12 @@ private fun HueSlider(
         )
     }
     Slider(
-        value = hue,
+        state = rememberSliderState(
+            value = hue,
+            trackRange =  0f..HUE_MAX
+        ),
         onValueChange = onHueChange,
         onValueChangeFinished = onHueChangeFinished,
-        valueRange = 0f..HUE_MAX,
         enabled = enabled,
         track = {
             Box(

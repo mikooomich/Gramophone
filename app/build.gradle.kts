@@ -5,8 +5,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.util.removeSuffixIfPresent
 import java.util.Properties
 
-val aboutLibsVersion = "13.1.0" // keep in sync with plugin version
-val kotlinVersion = "2.4.20"
+val aboutLibsVersion = "15.3.0" // keep in sync with plugin version
+val kotlinVersion = "2.4.21"
 
 plugins {
     id("com.android.application")
@@ -98,7 +98,7 @@ android {
 
     defaultConfig {
         applicationId = appIdOverride ?: "org.akanework.gramophone"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 37
         versionCode = 25
         versionName = "2.0.0"
@@ -313,7 +313,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     // Compile against the material3 the runtime already resolves to through the JetBrains
     // material3 that materialkolor and aboutlibraries depend on.
-    implementation("androidx.compose.material3:material3:1.5.0-alpha22")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.animation:animation-graphics")
     implementation("dev.chrisbanes.haze:haze:2.1.0")
     implementation("dev.chrisbanes.haze:haze-blur:2.1.0")
@@ -321,13 +321,13 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.collection:collection-ktx:1.6.0")
+    implementation("androidx.collection:collection-ktx:1.7.0")
     implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.graphics:graphics-shapes:1.1.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
-    implementation("androidx.navigation3:navigation3-runtime:1.1.7")
-    implementation("androidx.navigation3:navigation3-ui:1.1.7")
+    implementation("androidx.navigation3:navigation3-runtime:1.2.1")
+    implementation("androidx.navigation3:navigation3-ui:1.2.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("com.materialkolor:material-kolor:5.0.1")
     implementation(platform("io.insert-koin:koin-bom:4.2.2"))
@@ -347,7 +347,7 @@ dependencies {
     val coilVersion = "3.6.3"
     implementation("io.coil-kt.coil3:coil-compose:$coilVersion")
     lintChecks("io.coil-kt.coil3:coil-lint:$coilVersion")
-    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.1")
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.2")
     //noinspection GradleDependency newer versions need java.nio which is api 26+
     //implementation("com.github.albfernandez:juniversalchardet:2.0.3") TODO
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
@@ -355,7 +355,7 @@ dependencies {
     // --- below does not apply to release builds ---
 //    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("org.robolectric:robolectric:4.18")
     testImplementation("io.insert-koin:koin-android-test")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
     "userdebugImplementation"(kotlin("reflect", kotlinVersion)) // who thought String.invoke() is a good idea?????
