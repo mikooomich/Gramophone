@@ -549,25 +549,13 @@ private fun SharedArtwork(
 
 @Composable
  fun SharedArtwork2(
-//    state: NowPlayingSheetState,
-    player: PlayerSheetPlayerState,
-//    lyrics: LyricsOverlayState,
-//    queue: QueueRevealState,
-//    frame: () -> SheetFrame,
+    playerSheetPlayerState: PlayerSheetPlayerState,
     requestWidth: Float,
     cookie: Boolean,
-//    fadesOverQueue: Boolean,
+    roundedCornerSize: Dp = 0.dp,
     onClick: () -> Unit,
 ) {
-    val artwork = player.artworkUri
-    // Fade the shared cover out of the way when the lyric overlay covers the player. Derived, so
-    // the lyrics' fade and back gesture don't recompose the cover every frame.
-//    val lyricsCovering by remember(lyrics) { derivedStateOf { lyrics.covering } }
-//    val coverAlpha by animateFloatAsState(
-//        targetValue = if (lyricsCovering) 0f else 1f,
-//        animationSpec = tween(LYRIC_COVER_FADE_MS),
-//        label = "cover lyrics fade",
-//    )
+    val artwork = playerSheetPlayerState.artworkUri
 
     val context = LocalPlatformContext.current
     val coverDescription = stringResource(R.string.dialog_album)
@@ -581,36 +569,21 @@ private fun SharedArtwork(
             .build()
     }
 
-//    val coverClickable by remember(frame) {
-//        derivedStateOf { frame().progress > COVER_CLICK_MIN }
-//    }
-//    val clickModifier =if (coverClickable) Modifier.clickable(onClick = onClick) else Modifier
-//    val underQueue = fadesOverQueue && queue.revealed
-//    val gestures = if (lyricsCovering || queue.shown) {
-//        Modifier
-//    } else {
-//        Modifier.sheetDrag(state).then(clickModifier)
-//    }
     Box() {
         CrossfadeArtwork(
             request = request,
             modifier = Modifier
-//                .absolute { frame().artBounds }
-//                .graphicsLayer {
-//                    val f = frame()
-//                    // Out with the rest of the player as the queue comes up
-////                    alpha = if (fadesOverQueue) coverAlpha * (1f - queue.progress) else coverAlpha
-//                    shape = if (cookie) {
-//                        CookieMorphShape(f.progress)
-//                    } else {
-//                        RoundedCornerShape(f.artCorner)
-//                    }
-//                    clip = true
-//                }
+                .graphicsLayer {
+                    shape = if (cookie) {
+                        CookieMorphShape(roundedCornerSize.value)
+                    } else {
+                        RoundedCornerShape(roundedCornerSize)
+                    }
+                    clip = true
+                }
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                 .semantics {
                     contentDescription = coverDescription
-//                    if (lyricsCovering || underQueue) hideFromAccessibility()
                 }
                 .then(Modifier.clickable(onClick = onClick)),
         )

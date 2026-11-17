@@ -27,6 +27,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,22 +60,6 @@ fun MiniPlayer(
     barColour: () -> Color,
     modifier: Modifier = Modifier,
 ) {
-//    val playerConnection = LocalPlayerConnection.current ?: return
-//    val queueBoard by playerConnection.queueBoard.collectAsState()
-//
-//    val isPlaying by playerConnection.isPlaying.collectAsState()
-//    val playbackState by playerConnection.playbackState.collectAsState()
-//    val error by playerConnection.error.collectAsState()
-//    val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-//    val canSkipNext by playerConnection.canSkipNext.collectAsState()
-//
-//
-//    var position by rememberSaveable(playbackState) {
-//        mutableLongStateOf(playerConnection.player.currentPosition)
-//    }
-//    var duration by rememberSaveable(playbackState) {
-//        mutableLongStateOf(playerConnection.player.duration)
-//    }
 
     val (contentColor, playButtonContainer, playButtonContent) = miniBarColors()
     val title = playerSheetPlayerState.title
@@ -86,29 +71,22 @@ fun MiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(MiniPlayerHeight)
-//            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal))
-// //            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp))
     ) {
-//        LinearProgressIndicator(
-//            progress = { player.positionFraction.coerceIn(0f, 1f) },
-//            drawStopIndicator = { },
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(2.dp)
-//                .align(Alignment.BottomCenter),
-//        )
+        LinearProgressIndicator(
+            progress = { playerSheetPlayerState.positionFraction.coerceIn(0f, 1f) },
+            drawStopIndicator = { },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .align(Alignment.BottomCenter),
+        )
         Box(
             Modifier
-//                .onSheet(frame)
-//                .graphicsLayer { alpha = miniContentAlpha(frame().progress) },
-        ) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(playerSheetPlayerState.positionFraction.coerceIn(0f, 1f))
-                    .drawBehind { drawRect(barColour()) },
-            )
-        }
+                .fillMaxHeight()
+                .fillMaxWidth(playerSheetPlayerState.positionFraction.coerceIn(0f, 1f))
+                .drawBehind { drawRect(barColour()) },
+        )
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = modifier
@@ -125,15 +103,8 @@ fun MiniPlayer(
                             .padding(6.dp)
                             .size(48.dp)
                     ) {
-//                        AsyncImage(
-//                            model = mediaMetadata.getThumbnailModel(px, px),
-//                            contentDescription = null,
-//                            modifier = Modifier
-//                                .aspectRatio(1f)
-//                                .clip(RoundedCornerShape(ThumbnailCornerRadius))
-//                        )
                         SharedArtwork2(
-                            player = playerSheetPlayerState,
+                            playerSheetPlayerState = playerSheetPlayerState,
                             requestWidth = maxHeight.value,
                             cookie = cookieCover,
                             onClick = actions.openSongDetails
@@ -145,8 +116,6 @@ fun MiniPlayer(
                             .weight(1f)
                             .padding(horizontal = 6.dp)
                     ) {
-
-
 
 
                         Text(
