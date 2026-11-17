@@ -328,7 +328,7 @@ fun PlayerSheet(
 
 /** Mini bar text and play button colors. */
 @Immutable
-private data class MiniBarColors(
+data class MiniBarColors(
     val content: Color,
     val playButton: Color,
     val onPlayButton: Color,

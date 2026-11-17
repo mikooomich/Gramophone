@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,12 +48,16 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.ui.components.compose.AppDialogHost
 import org.akanework.gramophone.ui.components.compose.AppDialogHostState
 import org.akanework.gramophone.ui.components.compose.LocalAppDialogs
 import org.akanework.gramophone.ui.components.player.LocalPlayerSheet
 import org.akanework.gramophone.ui.components.player.PlayerSheetController
 import org.akanework.gramophone.ui.components.player.PlayerSheetHost
+import org.akanework.gramophone.ui.components.player.outertune.BottomSheetPlayer
+import org.akanework.gramophone.ui.components.player.outertune.MiniPlayerHeight
+import org.akanework.gramophone.ui.components.player.outertune.rememberBottomSheetState
 import org.akanework.gramophone.ui.screens.HomeScreen
 import org.akanework.gramophone.ui.screens.LibrarySubScreen
 import org.akanework.gramophone.ui.screens.PlaylistEditScreen
@@ -264,7 +269,7 @@ fun AppRoot(
         top?.let { playerSheet.visible = it.wantsPlayer }
     }
     val playerBottomPadding = playerSheet.bottomPadding
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         CompositionLocalProvider(
             LocalAppDialogs provides dialogs,
             LocalPlayerSheet provides playerSheet,
@@ -299,9 +304,23 @@ fun AppRoot(
                     .padding(start = 16.dp),
             )
         }
-        // Drawn above the pages, dialogs and snackbar. Composed after the pages so its back
-        // callback takes priority over theirs.
-        PlayerSheetHost(playerSheet)
+
+        if (!Flags.PLAYER_REWRITE) {
+            // Drawn above the pages, dialogs and snackbar. Composed after the pages so its back
+            // callback takes priority over theirs.
+            PlayerSheetHost(playerSheet)
+        } else {
+            val playerBottomSheetState = rememberBottomSheetState(
+                dismissedBound = 0.dp,
+                collapsedBound = MiniPlayerHeight + 20.dp,
+                expandedBound = maxHeight,
+                initialAnchor = 1
+            )
+            BottomSheetPlayer(
+                sheetstate = playerBottomSheetState,
+                sheetController = playerSheet,
+            )
+        }
     }
 }
 
