@@ -44,7 +44,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -111,8 +110,6 @@ import org.akanework.gramophone.ui.components.player.PlayerUtilities.TAP_EXPAND_
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.WIDE_LANDSCAPE_MIN_WIDTH
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.absolute
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.miniContentAlpha
-import org.akanework.gramophone.ui.fragments.compose.MqState
-import org.akanework.gramophone.ui.fragments.compose.rememberMqState
 import org.akanework.gramophone.ui.nav.NAV_TRANSITION_MS
 import org.akanework.gramophone.ui.nav.NavAxisEasing
 import org.akanework.gramophone.ui.theme.harmonizeBy
@@ -546,6 +543,76 @@ private fun SharedArtwork(
                     if (lyricsCovering || underQueue) hideFromAccessibility()
                 }
                 .then(gestures),
+        )
+    }
+}
+
+@Composable
+ fun SharedArtwork2(
+//    state: NowPlayingSheetState,
+    player: PlayerSheetPlayerState,
+//    lyrics: LyricsOverlayState,
+//    queue: QueueRevealState,
+//    frame: () -> SheetFrame,
+    requestWidth: Float,
+    cookie: Boolean,
+//    fadesOverQueue: Boolean,
+    onClick: () -> Unit,
+) {
+    val artwork = player.artworkUri
+    // Fade the shared cover out of the way when the lyric overlay covers the player. Derived, so
+    // the lyrics' fade and back gesture don't recompose the cover every frame.
+//    val lyricsCovering by remember(lyrics) { derivedStateOf { lyrics.covering } }
+//    val coverAlpha by animateFloatAsState(
+//        targetValue = if (lyricsCovering) 0f else 1f,
+//        animationSpec = tween(LYRIC_COVER_FADE_MS),
+//        label = "cover lyrics fade",
+//    )
+
+    val context = LocalPlatformContext.current
+    val coverDescription = stringResource(R.string.dialog_album)
+    val requestSizePx = requestWidth.roundToInt().coerceAtLeast(1)
+    // No artwork loads as a null request, which shows the default cover through the fallback.
+    val request = remember(artwork, requestSizePx) {
+        ImageRequest.Builder(context)
+            .data(artwork)
+            .size(requestSizePx)
+            .precision(Precision.INEXACT)
+            .build()
+    }
+
+//    val coverClickable by remember(frame) {
+//        derivedStateOf { frame().progress > COVER_CLICK_MIN }
+//    }
+//    val clickModifier =if (coverClickable) Modifier.clickable(onClick = onClick) else Modifier
+//    val underQueue = fadesOverQueue && queue.revealed
+//    val gestures = if (lyricsCovering || queue.shown) {
+//        Modifier
+//    } else {
+//        Modifier.sheetDrag(state).then(clickModifier)
+//    }
+    Box() {
+        CrossfadeArtwork(
+            request = request,
+            modifier = Modifier
+//                .absolute { frame().artBounds }
+//                .graphicsLayer {
+//                    val f = frame()
+//                    // Out with the rest of the player as the queue comes up
+////                    alpha = if (fadesOverQueue) coverAlpha * (1f - queue.progress) else coverAlpha
+//                    shape = if (cookie) {
+//                        CookieMorphShape(f.progress)
+//                    } else {
+//                        RoundedCornerShape(f.artCorner)
+//                    }
+//                    clip = true
+//                }
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .semantics {
+                    contentDescription = coverDescription
+//                    if (lyricsCovering || underQueue) hideFromAccessibility()
+                }
+                .then(Modifier.clickable(onClick = onClick)),
         )
     }
 }

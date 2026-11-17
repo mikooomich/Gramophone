@@ -19,11 +19,8 @@ import androidx.compose.ui.unit.dp
 import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.compose.rememberIntPreference
-import org.akanework.gramophone.ui.components.player.FullPlayerActions
 import org.akanework.gramophone.ui.components.player.MiniBarColors
-import org.akanework.gramophone.ui.components.player.NowPlayingSheetState
 import org.akanework.gramophone.ui.components.player.PlayerSheetController
-import org.akanework.gramophone.ui.components.player.PlayerSheetPlayerState
 import org.akanework.gramophone.ui.components.player.nowPlayingColors
 import org.akanework.gramophone.ui.components.player.rememberAnimatedColorScheme
 import org.akanework.gramophone.ui.components.player.rememberArtworkColorScheme
@@ -110,8 +107,10 @@ fun BottomSheetPlayer(
         collapsedContent = {
             MiniPlayer(
                 state = state,
-                player = player,
+                playerSheetPlayerState = player,
                 actions = actions,
+                miniBarColors = { miniColors.value },
+                barColour = { barColors.value.fill }
             )
         }) {
         Log.v(TAG, "PLR-3.0")
