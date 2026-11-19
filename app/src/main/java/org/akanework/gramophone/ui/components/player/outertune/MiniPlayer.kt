@@ -150,7 +150,7 @@ fun MiniPlayer(
             ) {
                 PlayPauseIcon(
                     playing = playerSheetPlayerState.showPause,
-                    tint = Color.Green,// playButtonContent,
+                    tint = playButtonContent,
                     modifier = Modifier.size(MINI_ICON_SIZE),
                     contentDescription = stringResource(
                         if (playerSheetPlayerState.showPause) R.string.pause else R.string.play
