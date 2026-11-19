@@ -34,6 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +60,7 @@ fun MiniPlayer(
     actions: FullPlayerActions,
     miniBarColors: () -> MiniBarColors,
     barColour: () -> Color,
+    backgroundColour: Color = MaterialTheme.colorScheme.surfaceContainer,
     modifier: Modifier = Modifier,
 ) {
 
@@ -71,6 +74,24 @@ fun MiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(MiniPlayerHeight)
+            .drawBehind {
+                val extra = 64.dp.toPx()
+                val totalHeight = size.height + extra
+
+                // overdraw fade out
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to backgroundColour,
+                            (size.height / totalHeight) to backgroundColour,
+                            1f to Color.Transparent,
+                        ),
+                        startY = 0f,
+                        endY = totalHeight,
+                    ),
+                    size = Size(size.width, totalHeight),
+                )
+            },
     ) {
         LinearProgressIndicator(
             progress = { playerSheetPlayerState.positionFraction.coerceIn(0f, 1f) },
