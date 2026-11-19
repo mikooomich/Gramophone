@@ -5,10 +5,14 @@ import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -23,8 +27,13 @@ import androidx.compose.ui.unit.dp
 import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.compose.rememberIntPreference
+import org.akanework.gramophone.ui.components.player.FullPlayerActions
 import org.akanework.gramophone.ui.components.player.MiniBarColors
+import org.akanework.gramophone.ui.components.player.NowPlayingColors
+import org.akanework.gramophone.ui.components.player.NowPlayingSheetState
 import org.akanework.gramophone.ui.components.player.PlayerSheetController
+import org.akanework.gramophone.ui.components.player.PlayerSheetPlayerState
+import org.akanework.gramophone.ui.components.player.SharedArtwork2
 import org.akanework.gramophone.ui.components.player.nowPlayingColors
 import org.akanework.gramophone.ui.components.player.rememberAnimatedColorScheme
 import org.akanework.gramophone.ui.components.player.rememberArtworkColorScheme
@@ -111,31 +120,60 @@ fun BottomSheetPlayer(
         },
         collapsedContent = {
             MiniPlayer(
+                bottomSheetState = sheetstate,
                 nowPlayingSheetState = state,
                 playerSheetPlayerState = player,
                 actions = actions,
-                miniBarColors = { miniColors.value },
+                miniBarColors = miniColors,
                 nowPlayingColors = barColors
             )
         }) {
         Log.v(TAG, "PLR-3.0")
 
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            LandscapePlayer()
+            LandscapePlayer(
+
+            )
         } else {
-            PortraitPlayer()
+            PortraitPlayer(
+                bottomSheetState = sheetstate,
+                nowPlayingSheetState = state,
+                playerSheetPlayerState = player,
+                actions = actions,
+                miniBarColors = miniColors,
+                nowPlayingColors = barColors
+            )
         }
     }
 }
 
 
 @Composable
-fun PortraitPlayer() {
+fun PortraitPlayer(
+    bottomSheetState: BottomSheetState,
+    nowPlayingSheetState: NowPlayingSheetState,
+    playerSheetPlayerState: PlayerSheetPlayerState,
+    actions: FullPlayerActions,
+    miniBarColors: State<MiniBarColors>,
+    nowPlayingColors: State<NowPlayingColors>
+) {
     Row(
         modifier = Modifier
             .fillMaxSize()
 
     ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .padding(6.dp)
+                .fillMaxSize()
+        ) {
+            SharedArtwork2(
+                playerSheetPlayerState = playerSheetPlayerState,
+                requestWidth = maxHeight.value,
+                cookie = false, //cookieCover,
+                onClick = actions.openSongDetails
+            )
+        }
 
     }
 }

@@ -569,7 +569,6 @@ private fun SharedArtwork(
             .build()
     }
 
-    Box() {
         CrossfadeArtwork(
             request = request,
             modifier = Modifier
@@ -581,13 +580,12 @@ private fun SharedArtwork(
                     }
                     clip = true
                 }
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .fillMaxSize() // WHY WERE WE RELYING ON HARD
                 .semantics {
                     contentDescription = coverDescription
                 }
                 .then(Modifier.clickable(onClick = onClick)),
         )
-    }
 }
 
 /** How long a new cover takes to fade in over the previous one. */

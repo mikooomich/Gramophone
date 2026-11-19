@@ -63,15 +63,16 @@ fun MiniPlayer(
     nowPlayingSheetState: NowPlayingSheetState,
     playerSheetPlayerState: PlayerSheetPlayerState,
     actions: FullPlayerActions,
-    miniBarColors: () -> MiniBarColors,
+    miniBarColors: State<MiniBarColors>,
     nowPlayingColors: State<NowPlayingColors>,
     modifier: Modifier = Modifier,
 ) {
     // i will clean this up later trust me
     val expanded = MaterialTheme.colorScheme.surfaceContainerLow
+//    val miniBarColors by miniBarColors
     val barColours by nowPlayingColors
     val backgroundColour = barColours.bar
-    val (contentColor, playButtonContainer, playButtonContent) = miniBarColors()
+    val (contentColor, playButtonContainer, playButtonContent) = miniBarColors.value
     val title = playerSheetPlayerState.title
     val artist = playerSheetPlayerState.artist
 
@@ -128,7 +129,7 @@ fun MiniPlayer(
                 ) {
                     BoxWithConstraints(
                         modifier = Modifier
-                            .padding(6.dp)
+//                            .padding(6.dp)
                             .size(48.dp)
                     ) {
                         SharedArtwork2(
