@@ -5,17 +5,19 @@ import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.lerp
@@ -27,13 +29,21 @@ import androidx.compose.ui.unit.dp
 import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.compose.rememberIntPreference
+import org.akanework.gramophone.ui.components.lyrics.LyricsOverlay
+import org.akanework.gramophone.ui.components.lyrics.LyricsOverlayState
+import org.akanework.gramophone.ui.components.lyrics.LyricsPadding
+import org.akanework.gramophone.ui.components.player.AnimatedColorScheme
 import org.akanework.gramophone.ui.components.player.FullPlayerActions
 import org.akanework.gramophone.ui.components.player.MiniBarColors
 import org.akanework.gramophone.ui.components.player.NowPlayingColors
 import org.akanework.gramophone.ui.components.player.NowPlayingSheetState
+import org.akanework.gramophone.ui.components.player.PlayerControls
 import org.akanework.gramophone.ui.components.player.PlayerSheetController
 import org.akanework.gramophone.ui.components.player.PlayerSheetPlayerState
-import org.akanework.gramophone.ui.components.player.SharedArtwork2
+import org.akanework.gramophone.ui.components.player.PlayerUtilities.ART_TOP_GAP
+import org.akanework.gramophone.ui.components.player.PlayerUtilities.EXPANDED_ACTION_BAR
+import org.akanework.gramophone.ui.components.player.PlayerUtilities.PORTRAIT_MARGIN
+import org.akanework.gramophone.ui.components.player.TopButtonRow
 import org.akanework.gramophone.ui.components.player.nowPlayingColors
 import org.akanework.gramophone.ui.components.player.rememberAnimatedColorScheme
 import org.akanework.gramophone.ui.components.player.rememberArtworkColorScheme
@@ -48,7 +58,7 @@ fun BottomSheetPlayer(
     sheetController: PlayerSheetController,
     modifier: Modifier = Modifier,
 
-) {
+    ) {
     val TAG = "BottomSheetPlayer"
     Log.v(TAG, "PLR-1")
 
@@ -107,11 +117,12 @@ fun BottomSheetPlayer(
         modifier = modifier,
         contentBackground = {
             val expanded = MaterialTheme.colorScheme.surfaceContainerLow
-            Box(Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawRect(lerp(barColors.value.bar, expanded, sheetstate.progress.coerceIn(0f, 1f)))
-                },
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        drawRect(lerp(barColors.value.bar, expanded, sheetstate.progress.coerceIn(0f, 1f)))
+                    },
             )
         },
 //        collapsedBackgroundColor = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp),
@@ -141,7 +152,9 @@ fun BottomSheetPlayer(
                 playerSheetPlayerState = player,
                 actions = actions,
                 miniBarColors = miniColors,
-                nowPlayingColors = barColors
+                nowPlayingColors = barColors,
+                lyrics = sheetController.lyrics,
+                scheme = coverScheme
             )
         }
     }
@@ -155,27 +168,47 @@ fun PortraitPlayer(
     playerSheetPlayerState: PlayerSheetPlayerState,
     actions: FullPlayerActions,
     miniBarColors: State<MiniBarColors>,
-    nowPlayingColors: State<NowPlayingColors>
+    nowPlayingColors: State<NowPlayingColors>,
+    lyrics: LyricsOverlayState,
+    scheme: AnimatedColorScheme
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
 
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .padding(6.dp)
+        LyricsOverlay(
+            state = lyrics,
+            scheme = scheme,
+            padding = LyricsPadding(0, 0, 0, 0),
+//            padding = LyricsPadding(
+//                left = geometry.leftInset.toInt(),
+//                top = geometry.statusTop.toInt(),
+//                right = geometry.rightInset.toInt(),
+//                bottom = geometry.bottomInset.toInt(),
+//            ),
+//                    modifier = Modifier . pageFollowingCover (frame),
+        )
+        Column(
+            Modifier
                 .fillMaxSize()
+//                .padding(insets),
         ) {
-            SharedArtwork2(
-                playerSheetPlayerState = playerSheetPlayerState,
-                requestWidth = maxHeight.value,
-                cookie = false, //cookieCover,
-                onClick = actions.openSongDetails
-            )
+            TopButtonRow(playerSheetPlayerState, actions, scheme, { /*onopendialog*/})
+            Spacer(Modifier.height(ART_TOP_GAP))
+            // The cover's slot. Its size already leaves the controls below their natural height
+            // (see SheetGeometry), so they sit centered in what is left.
+//            Spacer(Modifier.height(coverSize))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+//                    .fadingOverQueue(queue),
+                contentAlignment = Alignment.Center,
+            ) {
+                PlayerControls(
+                    playerSheetPlayerState, actions, scheme, { /*onOpenDialog*/ }, PORTRAIT_MARGIN, Modifier.fillMaxWidth(),
+                )
+            }
+            // The bottom row's place: the row is on top of the queue, see QueueDrawer
+            Spacer(Modifier.height(EXPANDED_ACTION_BAR))
         }
-
-    }
 }
 
 
