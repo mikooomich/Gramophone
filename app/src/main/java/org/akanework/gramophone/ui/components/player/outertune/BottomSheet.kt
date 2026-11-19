@@ -74,7 +74,7 @@ val BottomSheetSoftAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessLow)
 fun BottomSheet(
     state: BottomSheetState,
     modifier: Modifier = Modifier,
-    background: @Composable (BoxScope.() -> Unit) = { },
+    contentBackground: @Composable (BoxScope.() -> Unit) = { },
     onDismiss: (() -> Unit)? = null,
     collapsedHeight: Dp = MiniPlayerHeight,
     collapsedContent: @Composable BoxScope.() -> Unit,
@@ -83,6 +83,7 @@ fun BottomSheet(
 ) {
     val density = LocalDensity.current
 
+    /*
     Box(
         modifier = modifier
             .graphicsLayer {
@@ -90,8 +91,9 @@ fun BottomSheet(
                 alpha = (1.4f * (state.progress.coerceAtLeast(0.1f) - 0.1f).pow(0.5f)).coerceIn(0f, 1f)
             }
             .fillMaxSize(),
-        content = background
+        content = contentBackground
     )
+     */
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -133,6 +135,15 @@ fun BottomSheet(
 
         // main
         if (!state.isCollapsed) {
+            Box(
+                modifier = modifier
+                    .graphicsLayer {
+                        // background fades during about 10%-61% progress
+                        alpha = (1.4f * (state.progress.coerceAtLeast(0.1f) - 0.1f).pow(0.5f)).coerceIn(0f, 1f)
+                    }
+                    .fillMaxSize(),
+                content = contentBackground
+            )
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -147,29 +158,28 @@ fun BottomSheet(
         if (!state.isExpanded) {
             // startY must be < state.collapsedBound
             val startY = with(density) { (collapsedHeight - 1.dp).toPx() }
-            val colors = mutableListOf(collapsedBackgroundColor, Color.Transparent)
+//            val colors = mutableListOf(collapsedBackgroundColor, Color.Transparent)
             // no visible gradient if no bottom content to hide it
-            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE || collapsedHeight >= state.collapsedBound) {
-                colors[1] = collapsedBackgroundColor
-            }
+//            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE || collapsedHeight >= state.collapsedBound) {
+//                colors[1] = collapsedBackgroundColor
+//            }
             Box(
                 modifier = Modifier
                     .graphicsLayer {
                         alpha = 1f - (state.progress * 4).coerceAtMost(1f)
                         compositingStrategy = CompositingStrategy.ModulateAlpha
-                        clip = false // default, but explicit
                     }
                     .clickable(
                         onClick = state::expandSoft
                     )
                     .fillMaxWidth()
                     .height(state.collapsedBound)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = colors,
-                            startY = startY,
-                        )
-                    )
+//                    .background(
+//                        Brush.verticalGradient(
+//                            colors = colors,
+//                            startY = startY,
+//                        )
+//                    )
                     .testTag("bottom_sheet"),
                 content = collapsedContent
             )

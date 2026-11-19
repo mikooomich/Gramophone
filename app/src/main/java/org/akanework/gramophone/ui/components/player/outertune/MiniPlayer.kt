@@ -31,12 +31,15 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +48,7 @@ import org.akanework.gramophone.R
 import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.player.FullPlayerActions
 import org.akanework.gramophone.ui.components.player.MiniBarColors
+import org.akanework.gramophone.ui.components.player.NowPlayingColors
 import org.akanework.gramophone.ui.components.player.NowPlayingSheetState
 import org.akanework.gramophone.ui.components.player.PlayPauseIcon
 import org.akanework.gramophone.ui.components.player.PlayerSheetPlayerState
@@ -55,15 +59,18 @@ import org.akanework.gramophone.ui.components.player.SharedArtwork2
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun MiniPlayer(
-    state: NowPlayingSheetState,
+    bottomSheetState: BottomSheetState,
+    nowPlayingSheetState: NowPlayingSheetState,
     playerSheetPlayerState: PlayerSheetPlayerState,
     actions: FullPlayerActions,
     miniBarColors: () -> MiniBarColors,
-    barColour: () -> Color,
-    backgroundColour: Color = MaterialTheme.colorScheme.surfaceContainer,
+    nowPlayingColors: State<NowPlayingColors>,
     modifier: Modifier = Modifier,
 ) {
-
+    // i will clean this up later trust me
+    val expanded = MaterialTheme.colorScheme.surfaceContainerLow
+    val barColours by nowPlayingColors
+    val backgroundColour = barColours.bar
     val (contentColor, playButtonContainer, playButtonContent) = miniBarColors()
     val title = playerSheetPlayerState.title
     val artist = playerSheetPlayerState.artist
@@ -105,7 +112,7 @@ fun MiniPlayer(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(playerSheetPlayerState.positionFraction.coerceIn(0f, 1f))
-                .drawBehind { drawRect(barColour()) },
+                .drawBehind { drawRect(lerp(barColours.fill, expanded, bottomSheetState.progress.coerceIn(0f, 1f))) },
         )
 
         Row(
