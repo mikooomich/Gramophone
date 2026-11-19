@@ -52,6 +52,7 @@ import org.akanework.gramophone.logic.utils.Flags
 import org.akanework.gramophone.ui.components.compose.AppDialogHost
 import org.akanework.gramophone.ui.components.compose.AppDialogHostState
 import org.akanework.gramophone.ui.components.compose.LocalAppDialogs
+import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.player.LocalPlayerSheet
 import org.akanework.gramophone.ui.components.player.PlayerSheetController
 import org.akanework.gramophone.ui.components.player.PlayerSheetHost
@@ -305,11 +306,9 @@ fun AppRoot(
             )
         }
 
-        if (!Flags.PLAYER_REWRITE) {
-            // Drawn above the pages, dialogs and snackbar. Composed after the pages so its back
-            // callback takes priority over theirs.
-            PlayerSheetHost(playerSheet)
-        } else {
+        val playerRw = rememberBooleanPreference("player_rw", false).value
+
+        if (Flags.PLAYER_REWRITE && playerRw) {
             val playerBottomSheetState = rememberBottomSheetState(
                 dismissedBound = 0.dp,
                 collapsedBound = MiniPlayerHeight + 20.dp,
@@ -320,6 +319,11 @@ fun AppRoot(
                 sheetstate = playerBottomSheetState,
                 sheetController = playerSheet,
             )
+
+        } else {
+            // Drawn above the pages, dialogs and snackbar. Composed after the pages so its back
+            // callback takes priority over theirs.
+            PlayerSheetHost(playerSheet)
         }
     }
 }
