@@ -44,19 +44,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.RepeatOne
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -82,11 +78,10 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.REPEAT_MODE_OFF
 import coil3.compose.AsyncImage
 import org.akanework.gramophone.R
-import org.akanework.gramophone.logic.defaultPrefs
-import org.akanework.gramophone.logic.getBooleanStrict
 import org.akanework.gramophone.ui.MediaControllerViewModel
 import org.akanework.gramophone.ui.components.compose.TileButton
 import org.akanework.gramophone.ui.components.compose.TintedIcon
+import org.akanework.gramophone.ui.components.compose.rememberBooleanPreference
 import org.akanework.gramophone.ui.components.home.EDITABLE_ROW_ICON_END
 import org.akanework.gramophone.ui.components.home.EDITABLE_ROW_ICON_START
 import org.akanework.gramophone.ui.components.home.FloorCenterVertically
@@ -103,9 +98,9 @@ import org.akanework.gramophone.ui.components.player.PlayerUtilities.QUEUE_HANDL
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.QUEUE_HANDLE_WIDTH
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.QUEUE_PREVIEW_BOTTOM_PADDING
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.QUEUE_PREVIEW_PROGRESS_HEIGHT
-import org.akanework.gramophone.ui.components.player.PlayerUtilities.absolute
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.absoluteUnbounded
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.expandedContentAlpha
+import org.akanework.gramophone.ui.components.player.outertune.BottomSheetState
 import org.akanework.gramophone.ui.fragments.compose.MqList
 import org.akanework.gramophone.ui.fragments.compose.MqState
 import org.akanework.gramophone.ui.fragments.compose.QueueInfo
@@ -129,14 +124,14 @@ private val PREVIEW_ICON_SIZE = 22.dp
 private const val ROW_FADE_END = 0.3f
 
 /** The bottom row's opacity with the queue [progress] of the way up. */
-private fun rowAlpha(progress: Float) = (1f - progress / ROW_FADE_END).coerceIn(0f, 1f)
+fun rowAlpha(progress: Float) = (1f - progress / ROW_FADE_END).coerceIn(0f, 1f)
 
 /** The queue's, its handle's and songs', opacity with it [progress] of the way up. */
-private fun queueAlpha(progress: Float) =
+fun queueAlpha(progress: Float) =
     ((progress - ROW_FADE_END) / (1f - ROW_FADE_END)).coerceIn(0f, 1f)
 
 /** The drag handle's colour's opacity, as Material's. */
-private const val HANDLE_ALPHA = 0.4f
+const val HANDLE_ALPHA = 0.4f
 
 @Composable
 internal fun QueueSheet(
@@ -381,6 +376,138 @@ private fun QueueHeader(
                 mqEnabled = mqEnabled,
                 landscape = isWideLandscape,
                 onDismiss = queue::hide,
+            )
+
+            val lazyQueuesListState = rememberLazyListState()
+            AnimatedVisibility(
+                visible = mqState.expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                MqList(
+                    mqState = mqState,
+                    lazyQueuesListState = lazyQueuesListState,
+                    modifier = Modifier
+                        .heightIn(Dp.Unspecified, if (!isWideLandscape) 300.dp else Dp.Unspecified)
+                )
+            }
+        }
+
+        Column(
+
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = FloorCenterVertically,
+            ) {
+                ActionBar(mqState, scheme, actions, player) {
+                    AsyncImage(
+                        model = player.artworkUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        error = defaultCover,
+                        fallback = defaultCover,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(RoundedCornerShape(LIST_ROUND_CORNER_SIZE)),
+                    )
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .padding(horizontal = 18.dp),
+                    ) {
+                        SingleLineText(
+                            player.title?.toString().orEmpty(),
+                            17.sp,
+                            500,
+                            scheme.color { onSurface },
+                            Modifier.fillMaxWidth(),
+                        )
+                        SingleLineText(
+                            player.artist?.toString().orEmpty(), 14.sp, 400,
+                            scheme.color { onSurfaceVariant },
+                            Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+            LinearProgressIndicator(
+                progress = { player.positionFraction },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(QUEUE_PREVIEW_PROGRESS_HEIGHT),
+                color = scheme.color { primary },
+                trackColor = scheme.color { secondaryContainer },
+            )
+            Spacer(Modifier.height(QUEUE_PREVIEW_BOTTOM_PADDING))
+        }
+    }
+}
+
+@Composable
+fun QueueHeader2(
+    queueSheetState: BottomSheetState,
+    player: PlayerSheetPlayerState,
+    mqState: MqState,
+    actions: FullPlayerActions,
+    scheme: AnimatedColorScheme,
+    modifier: Modifier = Modifier,
+) {
+    val mqEnabled = rememberBooleanPreference("mq_preview", true).value
+
+//    val statusTop = with(LocalDensity.current) { geometry.statusTop.toDp() }
+    val defaultCover = rememberDefaultCoverPainter(R.drawable.ic_default_cover)
+
+    val isWideLandscape = false
+
+    Column(
+        verticalArrangement = if (isWideLandscape) Arrangement.SpaceBetween else Arrangement.Top,
+        modifier = modifier
+            // Faded in as one, the status bar's part with it
+            .graphicsLayer { alpha = queueSheetState.progress }
+            .drawBehind {
+                if (!isWideLandscape) {
+                    drawRect(scheme.color { surface })
+                }
+            }
+//            .padding(top = statusTop)
+//            .bottomRowDrag(drag)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = stringResource(R.string.expand_less),
+                onClick = queueSheetState::collapseSoft,
+            )
+//            .padding(sides)
+            // In line with the songs' drag handles and remove buttons under it
+            .padding(start = EDITABLE_ROW_ICON_START, end = EDITABLE_ROW_ICON_END)
+            .then(
+                if (isWideLandscape) {
+                    Modifier.fillMaxHeight()
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
+        BackHandler(mqState.expanded || mqState.isDetached()) {
+            if (mqState.isDetached()) {
+                mqState.resetHead()
+            } else if (!isWideLandscape && mqState.expanded) {
+                mqState.toggleExpand()
+            }
+        }
+
+        Column(
+            modifier = modifier
+                .fillMaxWidth(),
+        ) {
+            QueueInfo(
+                mqState = mqState,
+                mqEnabled = mqEnabled,
+                landscape = isWideLandscape,
+                onDismiss = queueSheetState::collapseSoft,
             )
 
             val lazyQueuesListState = rememberLazyListState()

@@ -9,7 +9,6 @@
 
 package org.akanework.gramophone.ui.components.player.outertune
 
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
@@ -17,7 +16,6 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -41,8 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -50,7 +46,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
@@ -62,9 +58,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.pow
 
 val MiniPlayerHeight = 64.dp
-val NavigationBarAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessMediumLow)
-val BottomSheetAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessMediumLow)
-val BottomSheetSoftAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessLow)
+val QueueHeight = 96.dp
+val NavigationBarAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessMedium)
+val BottomSheetAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessMedium)
+val BottomSheetSoftAnimationSpec = spring<Dp>(stiffness = Spring.StiffnessMediumLow)
 
 /**
  * Bottom Sheet
@@ -78,7 +75,10 @@ fun BottomSheet(
     onDismiss: (() -> Unit)? = null,
     collapsedHeight: Dp = MiniPlayerHeight,
     collapsedContent: @Composable BoxScope.() -> Unit,
-    collapsedBackgroundColor: Color = Color.Transparent,
+    contentShape: RoundedCornerShape? = RoundedCornerShape(
+        topStart = if (!state.isExpanded) 16.dp else 0.dp,
+        topEnd = if (!state.isExpanded) 16.dp else 0.dp
+    ),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val density = LocalDensity.current
@@ -94,40 +94,46 @@ fun BottomSheet(
         content = contentBackground
     )
      */
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .offset {
-                val y = (state.expandedBound - state.value)
-                    .roundToPx()
-                    .coerceAtLeast(0)
-                IntOffset(x = 0, y = y)
-            }
-            .pointerInput(state) {
-                val velocityTracker = VelocityTracker()
 
-                detectVerticalDragGestures(
-                    onVerticalDrag = { change, dragAmount ->
-                        velocityTracker.addPointerInputChange(change)
-                        state.dispatchRawDelta(dragAmount)
-                    },
-                    onDragCancel = {
-                        velocityTracker.resetTracking()
-                        state.snapTo(state.collapsedBound)
-                    },
-                    onDragEnd = {
-                        val velocity = -velocityTracker.calculateVelocity().y
-                        velocityTracker.resetTracking()
-                        state.performFling(velocity, onDismiss)
-                    }
-                )
-            }
-            .clip(
-                RoundedCornerShape(
-                    topStart = if (!state.isExpanded) 16.dp else 0.dp,
-                    topEnd = if (!state.isExpanded) 16.dp else 0.dp
+    val modifier = modifier
+        .layout { measurable, constraints ->
+            val expandedPx = state.expandedBound.roundToPx()
+            val placeable = measurable.measure(
+                constraints.copy(
+                    minWidth = constraints.maxWidth,
+                    minHeight = expandedPx,
+                    maxHeight = expandedPx,
                 )
             )
+            layout(constraints.maxWidth, constraints.maxHeight) {
+                val y = constraints.maxHeight - state.value.roundToPx()
+                placeable.place(0, y)
+            }
+        }
+        .pointerInput(state) {
+            val velocityTracker = VelocityTracker()
+
+            detectVerticalDragGestures(
+                onVerticalDrag = { change, dragAmount ->
+                    velocityTracker.addPointerInputChange(change)
+                    state.dispatchRawDelta(dragAmount)
+                },
+                onDragCancel = {
+                    velocityTracker.resetTracking()
+                    state.snapTo(state.collapsedBound)
+                },
+                onDragEnd = {
+                    val velocity = -velocityTracker.calculateVelocity().y
+                    velocityTracker.resetTracking()
+                    state.performFling(velocity, onDismiss)
+                }
+            )
+        }
+
+    Box(
+        modifier = contentShape?.let {
+            modifier.clip(it)
+        } ?: modifier
     ) {
         if (!state.isCollapsed && !state.isDismissed) {
             BackHandler(onBack = state::collapseSoft)
@@ -148,6 +154,7 @@ fun BottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
                         alpha = ((state.progress - 0.15f) * 4).coerceIn(0f, 1f)
                     },
                 content = content
@@ -194,6 +201,7 @@ class BottomSheetState(
     private val animatable: Animatable<Dp, AnimationVector1D>,
     private val onAnchorChanged: (Int) -> Unit,
     val collapsedBound: Dp,
+    private val dismissable: Boolean = false,
 ) : DraggableState by draggableState {
     val dismissedBound: Dp
         get() = animatable.lowerBound!!
@@ -250,6 +258,10 @@ class BottomSheetState(
     }
 
     fun dismiss() {
+        if (!dismissable) {
+            collapseSoft()
+            return
+        }
         onAnchorChanged(dismissedAnchor)
         coroutineScope.launch {
             animatable.animateTo(animatable.lowerBound!!)

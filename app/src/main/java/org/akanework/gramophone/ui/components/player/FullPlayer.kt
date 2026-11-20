@@ -156,6 +156,7 @@ import org.akanework.gramophone.ui.components.player.PlayerUtilities.TOP_BUTTON_
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.TRANSPORT_BUTTON_SIZE
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.expandedContentAlpha
 import org.akanework.gramophone.ui.components.player.PlayerUtilities.noRippleClickable
+import org.akanework.gramophone.ui.components.player.outertune.BottomSheetState
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -899,4 +900,92 @@ internal fun ActionBarRow(
         }
     }
 }
+
+@Composable
+internal fun ActionBarRow2(
+    queueSheetState: BottomSheetState,
+    player: PlayerSheetPlayerState,
+    actions: FullPlayerActions,
+    scheme: AnimatedColorScheme,
+    horizontalMargin: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val repeatMode = player.repeatMode
+    val shuffle = player.shuffleMode
+    val favorite = player.isFavorite
+    val plainTint = scheme.colorProducer { onSurface }
+    val checkTint = { on: Boolean ->
+        scheme.colorProducer { if (on) onPrimaryContainer else onSurfaceVariant }
+    }
+    val container = scheme.color { surfaceBright }
+    val checkedContainer = scheme.color { primaryContainer }
+    val leading = ButtonGroupDefaults.connectedLeadingButtonShapes()
+    val middle = ButtonGroupDefaults.connectedMiddleButtonShapes()
+    val trailing = ButtonGroupDefaults.connectedTrailingButtonShapes()
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = horizontalMargin,
+                    top = ACTION_BAR_VERTICAL_PADDING,
+                    end = horizontalMargin,
+                    bottom = ACTION_BAR_VERTICAL_PADDING,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val slot = Modifier.weight(1f).height(ACTION_BUTTON_SIZE)
+            GroupButton(
+                Icons.AutoMirrored.Outlined.Article, stringResource(R.string.dialog_lyrics), plainTint,
+                leading, container, actions.showLyrics, slot,
+            )
+            GroupToggleButton(
+                icon = if (repeatMode == Player.REPEAT_MODE_ONE) {
+                    Icons.Outlined.RepeatOne
+                } else {
+                    Icons.Outlined.Repeat
+                },
+                contentDescription = stringResource(R.string.repeat_mode),
+                tint = checkTint(repeatMode != Player.REPEAT_MODE_OFF),
+                shapes = middle,
+                container = container,
+                checkedContainer = checkedContainer,
+                checked = repeatMode != Player.REPEAT_MODE_OFF,
+                onClick = actions.cycleRepeat,
+                modifier = slot,
+            )
+            GroupToggleButton(
+                Icons.Outlined.Shuffle, stringResource(R.string.shuffle), checkTint(shuffle), middle,
+                container, checkedContainer, shuffle, { actions.toggleShuffle(!shuffle) }, slot,
+            )
+            GroupToggleButton(
+                icon = if (favorite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = stringResource(R.string.playlist_favourite),
+                // The favourite on the tertiary colours rather than the primary ones
+                tint = scheme.colorProducer { if (favorite) onTertiaryContainer else onSurface },
+                shapes = trailing,
+                container = container,
+                checkedContainer = scheme.color { tertiaryContainer },
+                checked = favorite,
+                onClick = { actions.toggleFavorite(!favorite) },
+                modifier = slot,
+            )
+        }
+
+        IconButton(
+            onClick = queueSheetState::expandSoft,
+            modifier = Modifier
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowUp,
+                contentDescription = null,
+            )
+        }
+    }
+}
+
 
