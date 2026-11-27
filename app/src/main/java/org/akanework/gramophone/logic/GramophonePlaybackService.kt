@@ -1764,6 +1764,7 @@ class GramophonePlaybackService : MediaLibraryService(), MediaSessionService.Lis
             refreshMediaButtonCustomLayout()
             if (!computeRgMode(false))
                 throw IllegalStateException("unreachable, mode failed with force=false")
+            lastPlayedManager.saveQueue()
         }
         // if it's a remotable timeline, it's a temporary masking timeline and real one will follow
         if (timeline !is Timeline.RemotableTimeline) {
