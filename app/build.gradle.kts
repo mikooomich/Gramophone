@@ -38,7 +38,11 @@ android {
     }
 
     namespace = "org.akanework.gramophone"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 2
+        }
+    }
 
     signingConfigs {
         create("release") {
@@ -313,13 +317,13 @@ ksp {
 dependencies {
     implementation(project(":hificore"))
     implementation(project(":misc:alacdecoder"))
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.compose.material:material-icons-extended")
     // Compile against the material3 the runtime already resolves to through the JetBrains
     // material3 that materialkolor and aboutlibraries depend on.
-    implementation("androidx.compose.material3:material3:1.5.0-rc01")
+    implementation("androidx.compose.material3:material3:1.5.0")
     implementation("androidx.compose.animation:animation-graphics")
     implementation("dev.chrisbanes.haze:haze:2.1.0")
     implementation("dev.chrisbanes.haze:haze-blur:2.1.0")
@@ -332,9 +336,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.graphics:graphics-shapes:1.1.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
-    implementation("androidx.navigation3:navigation3-runtime:1.2.1")
-    implementation("androidx.navigation3:navigation3-ui:1.2.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.navigation3:navigation3-runtime:1.2.2")
+    implementation("androidx.navigation3:navigation3-ui:1.2.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.1")
     implementation("com.materialkolor:material-kolor:5.0.1")
     implementation(platform("io.insert-koin:koin-bom:4.2.2"))
     implementation("io.insert-koin:koin-android")
@@ -361,7 +365,7 @@ dependencies {
     // --- below does not apply to release builds ---
     debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("org.robolectric:robolectric:4.18.1")
     testImplementation("io.insert-koin:koin-android-test")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
     "userdebugImplementation"(kotlin("reflect", kotlinVersion)) // who thought String.invoke() is a good idea?????
